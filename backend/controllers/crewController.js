@@ -5,7 +5,6 @@ import Driver from "../models/Driver.js";
 import Trolleybus from "../models/Trolleybus.js";
 import Crew from "../models/Crew.js";
 
-
 export const getAvailableConductors = async (req, res, next) => {
   try {
     const DEFAULT_LIMIT = 4;
