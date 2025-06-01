@@ -1,4 +1,5 @@
 import express from "express";
+import cors from 'cors';
 import "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import router from "./routes/index.js";
@@ -14,6 +15,10 @@ app.use((err, req, res, next) => {
     .status(500)
     .json({ message: "Внутренняя ошибка сервера", error: err.message });
 });
+app.use(  cors({
+  origin: process.env.MAIN_URL,
+  credentials: true,
+}));
 
 app.use("/api", router);
 
