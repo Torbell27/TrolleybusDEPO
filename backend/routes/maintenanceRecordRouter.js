@@ -1,3 +1,4 @@
+import express from "express";
 import {
   createMaintenanceRecord,
   getAllMaintenanceRecords,
@@ -10,9 +11,9 @@ import {
 const router = express.Router();
 
 // Роуты для записей о ТО
-router.post("/", createMaintenanceRecord);
-router.get("/", getAllMaintenanceRecords);
-router.get("/:id", getMaintenanceRecordById);
+router.post("/create", createMaintenanceRecord);
+router.get("/get", getAllMaintenanceRecords);
+router.get("/get/:id", getMaintenanceRecordById);
 router.put("/:id", updateMaintenanceRecord);
 router.delete("/:id", deleteMaintenanceRecord);
 router.get("/search", searchMaintenanceRecords);

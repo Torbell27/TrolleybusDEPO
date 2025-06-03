@@ -1,6 +1,7 @@
 import MaintenanceRecord from "../models/MaintenanceRecord.js";
 import MaintenanceCrew from "../models/MaintenanceCrew.js";
 import Trolleybus from "../models/Trolleybus.js";
+import { Op } from "sequelize";
 
 // Создание новой записи о ТО
 export const createMaintenanceRecord = async (req, res) => {
@@ -99,7 +100,7 @@ export const searchMaintenanceRecords = async (req, res) => {
       include: [{ model: MaintenanceCrew }, { model: Trolleybus }],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [["createdAt", "DESC"]], // Сортировка по дате создания
+      order: [["text", "DESC"]],
     });
 
     return res.status(200).json({
