@@ -1,10 +1,10 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
-const User = sequelize.define(
-  "User",
+const Route = sequelize.define(
+  "Route",
   {
-    user_id: {
+    route_id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       allowNull: false,
@@ -12,21 +12,14 @@ const User = sequelize.define(
     },
     name: {
       type: DataTypes.STRING(),
-      allowNull: false,
-    },
-    login: {
-      type: DataTypes.STRING(),
-      allowNull: false,
-    },
-    password: {
-      type: DataTypes.STRING(),
-      allowNull: false,
+      allowNull: true,
     },
   },
   {
-    tableName: "user",
+    tableName: "route",
+    schema: "public",
     timestamps: false,
   }
 );
 
-export default User;
+export default Route;

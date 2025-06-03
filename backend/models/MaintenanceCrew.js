@@ -1,32 +1,29 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
-const User = sequelize.define(
-  "User",
+const MaintenanceCrew = sequelize.define(
+  "MaintenanceCrew",
   {
-    user_id: {
+    m_crew_id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       allowNull: false,
       primaryKey: true,
     },
+    status: {
+      type: DataTypes.STRING(),
+      allowNull: true,
+    },
     name: {
       type: DataTypes.STRING(),
-      allowNull: false,
-    },
-    login: {
-      type: DataTypes.STRING(),
-      allowNull: false,
-    },
-    password: {
-      type: DataTypes.STRING(),
-      allowNull: false,
+      allowNull: true,
     },
   },
   {
-    tableName: "user",
+    tableName: "maintenance_crew",
+    schema: "public",
     timestamps: false,
   }
 );
 
-export default User;
+export default MaintenanceCrew;

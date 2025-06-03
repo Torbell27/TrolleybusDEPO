@@ -13,6 +13,7 @@ const App = () => {
       <NavigationBar />
       <Routes>
         <Route path="*" element={<NotFound />} />
+        <Route path="/" element={<Shift />} />
         <Route path="/shift" element={<Shift />} />
         <Route path="/crew" element={<Crew />} />
         <Route path="/maintenance" element={<Maintenance />} />
