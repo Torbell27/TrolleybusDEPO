@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import {
   Box,
@@ -41,7 +41,9 @@ const Crew: React.FC = () => {
   const [totalConductors, setTotalConductors] = useState<number>(0);
   const [pageConductors, setPageConductors] = useState<number>(1);
   const [searchConductors, setSearchConductors] = useState<string>("");
-  const [selectedConductor, setSelectedConductor] = useState<Person | null>(null);
+  const [selectedConductor, setSelectedConductor] = useState<Person | null>(
+    null
+  );
   const [loadingConductors, setLoadingConductors] = useState<boolean>(true);
 
   const [drivers, setDrivers] = useState<Person[]>([]);
@@ -55,12 +57,21 @@ const Crew: React.FC = () => {
   const [totalTrolleybuses, setTotalTrolleybuses] = useState<number>(0);
   const [pageTrolleybuses, setPageTrolleybuses] = useState<number>(1);
   const [searchTrolleybuses, setSearchTrolleybuses] = useState<string>("");
-  const [selectedTrolleybus, setSelectedTrolleybus] = useState<Trolleybus | null>(null);
+  const [selectedTrolleybus, setSelectedTrolleybus] =
+    useState<Trolleybus | null>(null);
   const [loadingTrolleybuses, setLoadingTrolleybuses] = useState<boolean>(true);
 
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const inputC = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inputC.current) {
+      inputC.current.focus();
+    }
+  }, []);
 
   const fetchConductors = async (pageNumber: number, query: string) => {
     setLoadingConductors(true);
@@ -97,10 +108,12 @@ const Crew: React.FC = () => {
   const fetchTrolleybuses = async (pageNumber: number, query: string) => {
     setLoadingTrolleybuses(true);
     try {
-      const response = await axios.get<{ trolleybuses: Trolleybus[]; total: number }>(
-        "http://localhost:5000/api/crew/getAvailableTrolleybuses",
-        { params: { page: pageNumber - 1, search: query } }
-      );
+      const response = await axios.get<{
+        trolleybuses: Trolleybus[];
+        total: number;
+      }>("http://localhost:5000/api/crew/getAvailableTrolleybuses", {
+        params: { page: pageNumber - 1, search: query },
+      });
       setTrolleybuses(response.data.trolleybuses);
       setTotalTrolleybuses(response.data.total);
     } catch (error) {
@@ -177,7 +190,7 @@ const Crew: React.FC = () => {
 
   return (
     <Box p={4}>
-{/* Кондукторы */}
+      {/* Кондукторы */}
       <Typography variant="h4" sx={classes.titleConductors} gutterBottom>
         Кондукторы
       </Typography>
@@ -188,11 +201,14 @@ const Crew: React.FC = () => {
         variant="outlined"
         fullWidth
         sx={classes.searchField}
+        inputRef={inputC}
       />
       <Typography
         sx={[
           classes.selectedText,
-          selectedConductor ? classes.selectedTextSuccess : classes.selectedTextDefault,
+          selectedConductor
+            ? classes.selectedTextSuccess
+            : classes.selectedTextDefault,
         ]}
       >
         {selectedConductor ? (
@@ -232,7 +248,12 @@ const Crew: React.FC = () => {
         </Paper>
       )}
       {totalPagesConductors > 1 && (
-        <Box mt={3} display="flex" justifyContent="center" sx={classes.paginationBox}>
+        <Box
+          mt={3}
+          display="flex"
+          justifyContent="center"
+          sx={classes.paginationBox}
+        >
           <Pagination
             count={totalPagesConductors}
             page={pageConductors}
@@ -257,7 +278,9 @@ const Crew: React.FC = () => {
       <Typography
         sx={[
           classes.selectedText,
-          selectedDriver ? classes.selectedTextSuccess : classes.selectedTextDefault,
+          selectedDriver
+            ? classes.selectedTextSuccess
+            : classes.selectedTextDefault,
         ]}
       >
         {selectedDriver ? (
@@ -297,7 +320,12 @@ const Crew: React.FC = () => {
         </Paper>
       )}
       {totalPagesDrivers > 1 && (
-        <Box mt={3} display="flex" justifyContent="center" sx={classes.paginationBox}>
+        <Box
+          mt={3}
+          display="flex"
+          justifyContent="center"
+          sx={classes.paginationBox}
+        >
           <Pagination
             count={totalPagesDrivers}
             page={pageDrivers}
@@ -322,12 +350,15 @@ const Crew: React.FC = () => {
       <Typography
         sx={[
           classes.selectedText,
-          selectedTrolleybus ? classes.selectedTextSuccess : classes.selectedTextDefault,
+          selectedTrolleybus
+            ? classes.selectedTextSuccess
+            : classes.selectedTextDefault,
         ]}
       >
         {selectedTrolleybus ? (
           <>
-            Выбран: <strong>{selectedTrolleybus.number}</strong> ({selectedTrolleybus.status})
+            Выбран: <strong>{selectedTrolleybus.number}</strong> (
+            {selectedTrolleybus.status})
           </>
         ) : (
           "Не выбран"
@@ -351,7 +382,9 @@ const Crew: React.FC = () => {
                 ]}
               >
                 <ListItemButton
-                  selected={t.trolleybus_id === selectedTrolleybus?.trolleybus_id}
+                  selected={
+                    t.trolleybus_id === selectedTrolleybus?.trolleybus_id
+                  }
                   onClick={() => setSelectedTrolleybus(t)}
                 >
                   {t.number}
@@ -362,7 +395,12 @@ const Crew: React.FC = () => {
         </Paper>
       )}
       {totalPagesTrolleybuses > 1 && (
-        <Box mt={3} display="flex" justifyContent="center" sx={classes.paginationBox}>
+        <Box
+          mt={3}
+          display="flex"
+          justifyContent="center"
+          sx={classes.paginationBox}
+        >
           <Pagination
             count={totalPagesTrolleybuses}
             page={pageTrolleybuses}
@@ -379,7 +417,10 @@ const Crew: React.FC = () => {
           color="primary"
           onClick={handleSubmit}
           disabled={
-            !selectedConductor || !selectedDriver || !selectedTrolleybus || submitting
+            !selectedConductor ||
+            !selectedDriver ||
+            !selectedTrolleybus ||
+            submitting
           }
           sx={{ px: 4, py: 1.5, fontSize: "16px" }}
         >
@@ -393,7 +434,11 @@ const Crew: React.FC = () => {
         autoHideDuration={3000}
         onClose={() => setSuccessMessage("")}
       >
-        <Alert onClose={() => setSuccessMessage("")} severity="success" sx={{ width: "100%" }}>
+        <Alert
+          onClose={() => setSuccessMessage("")}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
           {successMessage}
         </Alert>
       </Snackbar>
@@ -403,7 +448,11 @@ const Crew: React.FC = () => {
         autoHideDuration={3000}
         onClose={() => setErrorMessage("")}
       >
-        <Alert onClose={() => setErrorMessage("")} severity="error" sx={{ width: "100%" }}>
+        <Alert
+          onClose={() => setErrorMessage("")}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
           {errorMessage}
         </Alert>
       </Snackbar>
