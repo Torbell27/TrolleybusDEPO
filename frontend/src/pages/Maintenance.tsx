@@ -289,8 +289,8 @@ const Maintenance: React.FC = () => {
     const errors: Record<string, string> = {};
     if (!recordFormData.text) errors.text = "Текст обязателен";
     if (!recordFormData.m_crew_id) errors.m_crew_id = "Бригада обязательна";
-    //if (!recordFormData.trolleybus_id)
-    //  errors.trolleybus_id = "Троллейбус обязателен";
+    if (!recordFormData.trolleybus_id)
+      errors.trolleybus_id = "Троллейбус обязателен";
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
