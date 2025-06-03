@@ -66,6 +66,7 @@ const Crew: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const inputC = useRef<HTMLInputElement>(null);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (inputC.current) {
@@ -77,7 +78,7 @@ const Crew: React.FC = () => {
     setLoadingConductors(true);
     try {
       const response = await axios.get<{ conductors: Person[]; total: number }>(
-        "http://localhost:5000/api/crew/getAvailableConductors",
+        `${API_URL}/crew/getAvailableConductors`,
         { params: { page: pageNumber - 1, search: query } }
       );
       setConductors(response.data.conductors);
@@ -93,7 +94,7 @@ const Crew: React.FC = () => {
     setLoadingDrivers(true);
     try {
       const response = await axios.get<{ drivers: Person[]; total: number }>(
-        "http://localhost:5000/api/crew/getAvailableDrivers",
+        `${API_URL}/crew/getAvailableDrivers`,
         { params: { page: pageNumber - 1, search: query } }
       );
       setDrivers(response.data.drivers);
@@ -111,7 +112,7 @@ const Crew: React.FC = () => {
       const response = await axios.get<{
         trolleybuses: Trolleybus[];
         total: number;
-      }>("http://localhost:5000/api/crew/getAvailableTrolleybuses", {
+      }>(`${API_URL}/crew/getAvailableTrolleybuses`, {
         params: { page: pageNumber - 1, search: query },
       });
       setTrolleybuses(response.data.trolleybuses);
@@ -168,7 +169,7 @@ const Crew: React.FC = () => {
 
     setSubmitting(true);
     try {
-      await axios.post("http://localhost:5000/api/crew/createCrew", {
+      await axios.post(`${API_URL}/crew/createCrew`, {
         conductorId: selectedConductor.user_id,
         driverId: selectedDriver.user_id,
         trolleybusId: selectedTrolleybus.trolleybus_id,
