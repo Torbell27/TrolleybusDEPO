@@ -492,6 +492,7 @@ const Maintenance: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               gap: 2,
+              minWidth: 400,
             }}
           >
             <TextField
@@ -542,6 +543,7 @@ const Maintenance: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               gap: 2,
+              minWidth: 400,
             }}
           >
             <FormControlLabel
