@@ -8,6 +8,7 @@ const MaintenanceRecord = sequelize.define(
   {
     m_record_id: {
       type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       allowNull: false,
       primaryKey: true,
     },

@@ -8,6 +8,7 @@ const Trolleybus = sequelize.define(
   {
     trolleybus_id: {
       type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       allowNull: false,
       primaryKey: true,
     },

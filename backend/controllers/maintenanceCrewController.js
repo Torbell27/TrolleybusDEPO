@@ -3,13 +3,17 @@ import { Op } from "sequelize";
 
 // Создание новой ремонтной бригады
 export const createMaintenanceCrew = async (req, res) => {
+  const transaction = await MaintenanceCrew.sequelize.transaction();
   try {
-    const { status } = req.body;
-    const maintenanceCrew = await MaintenanceCrew.create({
-      status,
-    });
+    const { status, name } = req.body;
+    const maintenanceCrew = await MaintenanceCrew.create(
+      { status, name },
+      { transaction }
+    );
+    await transaction.commit();
     return res.status(201).json(maintenanceCrew);
   } catch (error) {
+    await transaction.rollback();
     return res.status(500).json({ error: error.message });
   }
 };
@@ -88,7 +92,7 @@ export const searchMaintenanceCrewsByStatus = async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [["status", "ASC"]], // Сортировка по статусу
+      order: [["name", "ASC"]], // Сортировка по статусу
     });
 
     return res.status(200).json({

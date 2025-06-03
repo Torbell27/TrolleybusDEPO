@@ -5,16 +5,22 @@ import { Op } from "sequelize";
 
 // Создание новой записи о ТО
 export const createMaintenanceRecord = async (req, res) => {
+  const transaction = await MaintenanceRecord.sequelize.transaction();
   try {
     const { planned, text, m_crew_id, trolleybus_id } = req.body;
-    const maintenanceRecord = await MaintenanceRecord.create({
-      planned,
-      text,
-      m_crew_id,
-      trolleybus_id,
-    });
+    const maintenanceRecord = await MaintenanceRecord.create(
+      {
+        planned,
+        text,
+        m_crew_id,
+        trolleybus_id: trolleybus_id || null,
+      },
+      { transaction }
+    );
+    await transaction.commit();
     return res.status(201).json(maintenanceRecord);
   } catch (error) {
+    await transaction.rollback();
     return res.status(500).json({ error: error.message });
   }
 };

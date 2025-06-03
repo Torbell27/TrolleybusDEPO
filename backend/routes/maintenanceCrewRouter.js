@@ -11,8 +11,8 @@ import {
 const router = express.Router();
 
 // Роуты для ремонтных бригад
-router.post("/create", createMaintenanceCrew);
-router.get("/get", getAllMaintenanceCrews);
+router.post("/", createMaintenanceCrew);
+router.get("/", getAllMaintenanceCrews);
 router.get("/get/:id", getMaintenanceCrewById);
 router.put("/:id", updateMaintenanceCrew);
 router.delete("/:id", deleteMaintenanceCrew);

@@ -6,10 +6,15 @@ const MaintenanceCrew = sequelize.define(
   {
     m_crew_id: {
       type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       allowNull: false,
       primaryKey: true,
     },
     status: {
+      type: DataTypes.STRING(),
+      allowNull: true,
+    },
+    name: {
       type: DataTypes.STRING(),
       allowNull: true,
     },
