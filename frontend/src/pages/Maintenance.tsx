@@ -484,7 +484,7 @@ const Maintenance: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {!record.completed && (
-                          <Tooltip title="Заврешить">
+                          <Tooltip title="Завершить">
                             <IconButton
                               onClick={() => setCompleteDialog(record)}
                             >
