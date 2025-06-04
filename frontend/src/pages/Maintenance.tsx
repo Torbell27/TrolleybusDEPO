@@ -125,7 +125,7 @@ const Maintenance: React.FC = () => {
       setCrews(response.data.crews);
       setCrewTotalPages(response.data.pages);
     } catch (error) {
-      //console.error("Error fetching crews:", error);
+      setOkDialog("Не удалось загрузить ремонтные бригады");
     }
   };
 
@@ -141,7 +141,7 @@ const Maintenance: React.FC = () => {
       setRecords(response.data.records);
       setRecordTotalPages(response.data.pages);
     } catch (error) {
-      //console.error("Error fetching records:", error);
+      setOkDialog("Не удалось загрузить записи о ТО");
     }
   };
 
@@ -149,18 +149,14 @@ const Maintenance: React.FC = () => {
     try {
       const response = await api.get("/maintenance-crew");
       setAllCrews(response.data);
-    } catch (error) {
-      //console.error("Error fetching all crews:", error);
-    }
+    } catch (error) {}
   };
 
   const fetchAllTrolleybuses = async () => {
     try {
       const response = await api.get("/trolleybuses");
       setAllTrolleybuses(response.data);
-    } catch (error) {
-      //console.error("Error fetching all trolleybuses:", error);
-    }
+    } catch (error) {}
   };
 
   useEffect(() => {
@@ -585,8 +581,8 @@ const Maintenance: React.FC = () => {
       >
         <DialogTitle>
           {dialogMode === "create"
-            ? "Добавить запись ТО"
-            : "Редактировать запись ТО"}
+            ? "Добавить запись о ТО"
+            : "Редактировать запись о ТО"}
         </DialogTitle>
         <DialogContent>
           <Box
@@ -714,7 +710,7 @@ const Maintenance: React.FC = () => {
       </Dialog>
 
       <Dialog open={!!completeDialog} onClose={() => setCompleteDialog(null)}>
-        <DialogTitle>Завершение ТО</DialogTitle>
+        <DialogTitle>Завершить ТО</DialogTitle>
         <DialogContent>
           <FormControlLabel
             control={
