@@ -404,14 +404,19 @@ const Maintenance: React.FC = () => {
                       <TableCell>{crew.status}</TableCell>
 
                       <TableCell>
-                        <IconButton onClick={() => handleCrewEdit(crew)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleCrewDelete(crew.m_crew_id)}
-                        >
-                          <DeleteIcon color="error" />
-                        </IconButton>
+                        <Tooltip title="Изменить">
+                          <IconButton onClick={() => handleCrewEdit(crew)}>
+                            <EditIcon color="primary" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Удалить">
+                          <IconButton
+                            onClick={() => handleCrewDelete(crew.m_crew_id)}
+                          >
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -483,7 +488,7 @@ const Maintenance: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {!record.completed && (
-                          <Tooltip title="Заврешить ТО">
+                          <Tooltip title="Заврешить">
                             <IconButton
                               onClick={() => setCompleteDialog(record)}
                             >
@@ -491,14 +496,21 @@ const Maintenance: React.FC = () => {
                             </IconButton>
                           </Tooltip>
                         )}
-                        <IconButton onClick={() => handleRecordEdit(record)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleRecordDelete(record.m_record_id)}
-                        >
-                          <DeleteIcon color="error" />
-                        </IconButton>
+                        <Tooltip title="Изменить">
+                          <IconButton onClick={() => handleRecordEdit(record)}>
+                            <EditIcon color="primary" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Удалить">
+                          <IconButton
+                            onClick={() =>
+                              handleRecordDelete(record.m_record_id)
+                            }
+                          >
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
