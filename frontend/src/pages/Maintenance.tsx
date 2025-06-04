@@ -27,24 +27,32 @@ import {
   Alert,
   Grid,
   useMediaQuery,
+  Tooltip,
 } from "@mui/material";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Search as SearchIcon,
+  Check as CheckIcon,
 } from "@mui/icons-material";
 
-// Axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Types
 interface MaintenanceCrew {
   m_crew_id: string;
   status: string;
   name: string;
+}
+
+interface Trolleybus {
+  trolleybus_id: string;
+  status: string;
+  number: string;
+  route_id: string | null;
+  crew_id: string | null;
 }
 
 interface MaintenanceRecord {
@@ -53,30 +61,24 @@ interface MaintenanceRecord {
   text: string;
   m_crew_id: string;
   trolleybus_id: string;
-}
-
-interface Trolleybus {
-  trolleybus_id: string;
-  model: string;
-  number: string;
+  completed: boolean;
+  Trolleybus: Trolleybus;
 }
 
 const Maintenance: React.FC = () => {
   const isPhone = useMediaQuery<boolean>("(max-width:1500px)");
 
-  // State for crews
   const [crews, setCrews] = useState<MaintenanceCrew[]>([]);
   const [crewPage, setCrewPage] = useState(1);
   const [crewTotalPages, setCrewTotalPages] = useState(1);
   const [crewSearchStatus, setCrewSearchStatus] = useState("");
 
-  // State for records
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [recordPage, setRecordPage] = useState(1);
   const [recordTotalPages, setRecordTotalPages] = useState(1);
   const [recordSearchText, setRecordSearchText] = useState("");
 
-  // State for dialogs
+  const [okDialog, setOkDialog] = useState<string>("");
   const [crewDialogOpen, setCrewDialogOpen] = useState(false);
   const [recordDialogOpen, setRecordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<
@@ -85,7 +87,6 @@ const Maintenance: React.FC = () => {
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [currentItemId, setCurrentItemId] = useState<string | null>(null);
 
-  // Form data
   const [crewFormData, setCrewFormData] = useState({
     status: "",
     name: "",
@@ -98,32 +99,33 @@ const Maintenance: React.FC = () => {
     trolleybus_id: "",
   });
 
-  // Options for selects
   const [allCrews, setAllCrews] = useState<MaintenanceCrew[]>([]);
   const [allTrolleybuses, setAllTrolleybuses] = useState<Trolleybus[]>([]);
 
-  // Errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const [completeDialog, setCompleteDialog] =
+    useState<MaintenanceRecord | null>(null);
+  const [trolleybusCanWork, setTrolleybusCanWork] = useState<boolean>(false);
 
   const inputC = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (inputC.current) inputC.current.focus();
   }, []);
 
-  // Fetch data functions
   const fetchCrews = async () => {
     try {
       const response = await api.get("/maintenance-crew/search", {
         params: {
           status: crewSearchStatus,
           page: crewPage,
-          limit: 5,
+          limit: 10,
         },
       });
       setCrews(response.data.crews);
       setCrewTotalPages(response.data.pages);
     } catch (error) {
-      console.error("Error fetching crews:", error);
+      setOkDialog("Не удалось загрузить ремонтные бригады");
     }
   };
 
@@ -133,13 +135,13 @@ const Maintenance: React.FC = () => {
         params: {
           text: recordSearchText,
           page: recordPage,
-          limit: 5,
+          limit: 10,
         },
       });
       setRecords(response.data.records);
       setRecordTotalPages(response.data.pages);
     } catch (error) {
-      console.error("Error fetching records:", error);
+      setOkDialog("Не удалось загрузить записи о ТО");
     }
   };
 
@@ -147,18 +149,14 @@ const Maintenance: React.FC = () => {
     try {
       const response = await api.get("/maintenance-crew");
       setAllCrews(response.data);
-    } catch (error) {
-      console.error("Error fetching all crews:", error);
-    }
+    } catch (error) {}
   };
 
   const fetchAllTrolleybuses = async () => {
     try {
-      const response = await api.get("/trolleybuses"); // Предполагаем, что такой эндпоинт существует
+      const response = await api.get("/trolleybuses");
       setAllTrolleybuses(response.data);
-    } catch (error) {
-      console.error("Error fetching all trolleybuses:", error);
-    }
+    } catch (error) {}
   };
 
   useEffect(() => {
@@ -166,7 +164,6 @@ const Maintenance: React.FC = () => {
     fetchAllTrolleybuses();
   }, []);
 
-  // Load data on mount and when page/search changes
   const [searchCrewTimeout, setSearchCrewTimeout] = useState<number | null>(
     null
   );
@@ -207,7 +204,6 @@ const Maintenance: React.FC = () => {
     fetchRecords();
   }, [recordPage]);
 
-  // Crew handlers
   const handleCrewCreate = () => {
     setDialogMode("create");
     setCrewFormData({ status: "", name: "" });
@@ -229,7 +225,6 @@ const Maintenance: React.FC = () => {
   };
 
   const handleCrewSubmit = async () => {
-    // Validation
     const errors: Record<string, string> = {};
     if (!crewFormData.name) errors.name = "Имя обязательно";
     if (!crewFormData.status) errors.status = "Статус обязателен";
@@ -242,18 +237,21 @@ const Maintenance: React.FC = () => {
     try {
       if (dialogMode === "create") {
         await api.post("/maintenance-crew", crewFormData);
+        setOkDialog("Запись о ремонтной бригаде успешно создана");
       } else {
         await api.put(`/maintenance-crew/${currentItemId}`, crewFormData);
+        setOkDialog("Запись о ремонтной бригаде успешно изменена");
       }
       setCrewDialogOpen(false);
-      fetchCrews();
-      fetchAllCrews();
+      await fetchCrews();
+      await fetchAllCrews();
     } catch (error) {
-      console.error("Error saving crew:", error);
+      if (dialogMode === "create")
+        setOkDialog("Не удалось создать запись о ремонтной бригаде");
+      else setOkDialog("Не удалось изменить запись о ремонтной бригаде");
     }
   };
 
-  // Record handlers
   const handleRecordCreate = () => {
     setDialogMode("create");
     setRecordFormData({
@@ -285,7 +283,6 @@ const Maintenance: React.FC = () => {
   };
 
   const handleRecordSubmit = async () => {
-    // Validation
     const errors: Record<string, string> = {};
     if (!recordFormData.text) errors.text = "Текст обязателен";
     if (!recordFormData.m_crew_id) errors.m_crew_id = "Бригада обязательна";
@@ -300,31 +297,57 @@ const Maintenance: React.FC = () => {
     try {
       if (dialogMode === "create") {
         await api.post("/maintenance-record", recordFormData);
+        setOkDialog("Запись о ТО успешно создана");
+        await fetchAllTrolleybuses();
       } else {
         await api.put(`/maintenance-record/${currentItemId}`, recordFormData);
+        setOkDialog("Запись о ТО успешно изменена");
       }
       setRecordDialogOpen(false);
-      fetchRecords();
+      await fetchRecords();
     } catch (error) {
-      console.error("Error saving record:", error);
+      if (dialogMode === "create")
+        setOkDialog("Не удалось создать запись о ТО");
+      else setOkDialog("Не удалось изменить запись о ТО");
     }
   };
 
-  // Delete handler
+  useEffect(() => {
+    setCrewPage((prev) => Math.min(prev, crewTotalPages));
+    setRecordPage((prev) => Math.min(prev, recordTotalPages));
+  }, [crewTotalPages, recordTotalPages]);
+
   const handleDeleteConfirm = async () => {
     try {
-      // Determine which entity to delete based on which dialog was open
       if (deleteDialogOpen === "crew") {
         await api.delete(`/maintenance-crew/${currentItemId}`);
-        fetchCrews();
-        fetchAllCrews();
+        await fetchCrews();
+        await fetchAllCrews();
       } else {
         await api.delete(`/maintenance-record/${currentItemId}`);
-        fetchRecords();
+        await fetchRecords();
       }
       setDeleteDialogOpen("");
+      setOkDialog("Запись успешно удалена");
     } catch (error) {
-      console.error("Error deleting item:", error);
+      setOkDialog("Не удалось удалить запись");
+    }
+  };
+
+  const handleCompleteRecord = async () => {
+    try {
+      const record = completeDialog;
+      if (!record) return;
+      await api.put(`/maintenance-record/complete/${record.m_record_id}`, {
+        trolleybus_can_work: trolleybusCanWork,
+        trolleybus_id: record.trolleybus_id,
+      });
+      setCompleteDialog(null);
+      setOkDialog("Статус троллейбуса и записи успешно изменены");
+      await fetchRecords();
+      await fetchAllTrolleybuses();
+    } catch (error) {
+      setOkDialog("Не удалось обновить статус троллейбуса и записи");
     }
   };
 
@@ -335,7 +358,7 @@ const Maintenance: React.FC = () => {
       </Typography>
 
       <Grid container spacing={2} direction={isPhone ? "column" : "row"}>
-        {/* Crews Table */}
+        {/* Таблица ремонтной бригады */}
         <Grid sx={{ flex: 1 }}>
           <Paper sx={{ p: 2 }}>
             <Box
@@ -377,14 +400,19 @@ const Maintenance: React.FC = () => {
                       <TableCell>{crew.status}</TableCell>
 
                       <TableCell>
-                        <IconButton onClick={() => handleCrewEdit(crew)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleCrewDelete(crew.m_crew_id)}
-                        >
-                          <DeleteIcon color="error" />
-                        </IconButton>
+                        <Tooltip title="Изменить">
+                          <IconButton onClick={() => handleCrewEdit(crew)}>
+                            <EditIcon color="primary" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Удалить">
+                          <IconButton
+                            onClick={() => handleCrewDelete(crew.m_crew_id)}
+                          >
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -403,7 +431,7 @@ const Maintenance: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Records Table */}
+        {/* Таблица записей о ТО */}
         <Grid sx={{ flex: 1 }}>
           <Paper sx={{ p: 2 }}>
             <Box
@@ -437,6 +465,7 @@ const Maintenance: React.FC = () => {
                     <TableCell>ID</TableCell>
                     <TableCell>Текст</TableCell>
                     <TableCell>Запланировано</TableCell>
+                    <TableCell>Завершено</TableCell>
                     <TableCell>Действия</TableCell>
                   </TableRow>
                 </TableHead>
@@ -451,14 +480,33 @@ const Maintenance: React.FC = () => {
                         <Checkbox checked={record.planned} disabled />
                       </TableCell>
                       <TableCell>
-                        <IconButton onClick={() => handleRecordEdit(record)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleRecordDelete(record.m_record_id)}
-                        >
-                          <DeleteIcon color="error" />
-                        </IconButton>
+                        <Checkbox checked={record.completed} disabled />
+                      </TableCell>
+                      <TableCell>
+                        {!record.completed && (
+                          <Tooltip title="Завершить">
+                            <IconButton
+                              onClick={() => setCompleteDialog(record)}
+                            >
+                              <CheckIcon color="primary" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Изменить">
+                          <IconButton onClick={() => handleRecordEdit(record)}>
+                            <EditIcon color="primary" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Удалить">
+                          <IconButton
+                            onClick={() =>
+                              handleRecordDelete(record.m_record_id)
+                            }
+                          >
+                            <DeleteIcon color="error" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -478,7 +526,7 @@ const Maintenance: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Crew Dialog */}
+      {/* Диалоговое окно для бригады */}
       <Dialog open={crewDialogOpen} onClose={() => setCrewDialogOpen(false)}>
         <DialogTitle>
           {dialogMode === "create"
@@ -526,15 +574,15 @@ const Maintenance: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Record Dialog */}
+      {/* Диалоговое окно для записи о ТО */}
       <Dialog
         open={recordDialogOpen}
         onClose={() => setRecordDialogOpen(false)}
       >
         <DialogTitle>
           {dialogMode === "create"
-            ? "Добавить запись ТО"
-            : "Редактировать запись ТО"}
+            ? "Добавить запись о ТО"
+            : "Редактировать запись о ТО"}
         </DialogTitle>
         <DialogContent>
           <Box
@@ -588,7 +636,7 @@ const Maintenance: React.FC = () => {
               >
                 {allCrews.map((crew) => (
                   <MenuItem key={crew.m_crew_id} value={crew.m_crew_id}>
-                    {crew.name} ({crew.m_crew_id.substring(0, 8)}...)
+                    {crew.name} ({crew.status})
                   </MenuItem>
                 ))}
               </Select>
@@ -611,14 +659,21 @@ const Maintenance: React.FC = () => {
                 }
                 label="Троллейбус"
               >
-                {allTrolleybuses.map((trolleybus) => (
-                  <MenuItem
-                    key={trolleybus.trolleybus_id}
-                    value={trolleybus.trolleybus_id}
-                  >
-                    {trolleybus.model} ({trolleybus.number})
-                  </MenuItem>
-                ))}
+                {allTrolleybuses
+                  .filter((t) => {
+                    return (
+                      t.status ===
+                      (!recordFormData.planned ? "Работает" : "В депо")
+                    );
+                  })
+                  .map((trolleybus) => (
+                    <MenuItem
+                      key={trolleybus.trolleybus_id}
+                      value={trolleybus.trolleybus_id}
+                    >
+                      {trolleybus.number} ({trolleybus.status})
+                    </MenuItem>
+                  ))}
               </Select>
               {formErrors.trolleybus_id && (
                 <Alert severity="error" sx={{ mt: 1 }}>
@@ -636,7 +691,7 @@ const Maintenance: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Диалоговое окно подтверждения удаления */}
       <Dialog open={!!deleteDialogOpen} onClose={() => setDeleteDialogOpen("")}>
         <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
@@ -651,6 +706,36 @@ const Maintenance: React.FC = () => {
           >
             Удалить
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!completeDialog} onClose={() => setCompleteDialog(null)}>
+        <DialogTitle>Завершить ТО</DialogTitle>
+        <DialogContent>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={trolleybusCanWork}
+                onChange={(e) => setTrolleybusCanWork(e.target.checked)}
+              />
+            }
+            label={`Троллейбус ${completeDialog?.Trolleybus?.number} может продолжать работу`}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleCompleteRecord()}>Завершить</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!okDialog} onClose={() => setOkDialog("")}>
+        <DialogTitle>
+          {okDialog.includes("Не удалось") ? "Ошибка" : "Успешно"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>{okDialog}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOkDialog("")}>ОК</Button>
         </DialogActions>
       </Dialog>
     </Box>

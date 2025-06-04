@@ -17,10 +17,40 @@ export const createMaintenanceRecord = async (req, res) => {
       },
       { transaction }
     );
+    await Trolleybus.update(
+      { status: "Обслуживается" },
+      {
+        where: { trolleybus_id },
+      }
+    );
     await transaction.commit();
     return res.status(201).json(maintenanceRecord);
   } catch (error) {
     await transaction.rollback();
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// Завершение ТО
+export const completeMaintenanceRecord = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { trolleybus_can_work, trolleybus_id } = req.body;
+    await MaintenanceRecord.update(
+      { completed: true },
+      {
+        where: { m_record_id: id },
+      }
+    );
+    if (trolleybus_id)
+      await Trolleybus.update(
+        { status: !!trolleybus_can_work ? "Работает" : "В депо" },
+        {
+          where: { trolleybus_id },
+        }
+      );
+    return res.status(200).send();
+  } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };

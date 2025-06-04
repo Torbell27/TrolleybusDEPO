@@ -28,6 +28,10 @@ const MaintenanceRecord = sequelize.define(
       type: DataTypes.UUID,
       allowNull: true,
     },
+    completed: {
+      type: DataTypes.BOOLEAN(),
+      allowNull: false,
+    },
   },
   {
     tableName: "maintenance_record",

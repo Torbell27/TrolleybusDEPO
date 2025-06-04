@@ -6,6 +6,7 @@ import {
   updateMaintenanceRecord,
   deleteMaintenanceRecord,
   searchMaintenanceRecords,
+  completeMaintenanceRecord,
 } from "../controllers/maintenanceRecordController.js";
 
 const router = express.Router();
@@ -17,5 +18,6 @@ router.get("/get/:id", getMaintenanceRecordById);
 router.put("/:id", updateMaintenanceRecord);
 router.delete("/:id", deleteMaintenanceRecord);
 router.get("/search", searchMaintenanceRecords);
+router.put("/complete/:id", completeMaintenanceRecord);
 
 export default router;

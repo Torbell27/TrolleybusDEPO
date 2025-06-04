@@ -92,7 +92,7 @@ export const searchMaintenanceCrewsByStatus = async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [["name", "ASC"]], // Сортировка по статусу
+      order: [["name", "ASC"]], // Сортировка по имени
     });
 
     return res.status(200).json({
