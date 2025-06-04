@@ -27,12 +27,14 @@ import {
   Alert,
   Grid,
   useMediaQuery,
+  Tooltip,
 } from "@mui/material";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Search as SearchIcon,
+  Check as CheckIcon,
 } from "@mui/icons-material";
 
 const api = axios.create({
@@ -45,18 +47,22 @@ interface MaintenanceCrew {
   name: string;
 }
 
+interface Trolleybus {
+  trolleybus_id: string;
+  status: string;
+  number: string;
+  route_id: string | null;
+  crew_id: string | null;
+}
+
 interface MaintenanceRecord {
   m_record_id: string;
   planned: boolean;
   text: string;
   m_crew_id: string;
   trolleybus_id: string;
-}
-
-interface Trolleybus {
-  trolleybus_id: string;
-  model: string;
-  number: string;
+  completed: boolean;
+  Trolleybus: Trolleybus;
 }
 
 const Maintenance: React.FC = () => {
@@ -94,9 +100,91 @@ const Maintenance: React.FC = () => {
   });
 
   const [allCrews, setAllCrews] = useState<MaintenanceCrew[]>([]);
-  const [allTrolleybuses, setAllTrolleybuses] = useState<Trolleybus[]>([]);
+  const [allTrolleybuses, setAllTrolleybuses] = useState<Trolleybus[]>([
+    {
+      trolleybus_id: "6699554f-4b7a-4481-9a03-3974ac8a8bfd",
+      number: "Т 602",
+      status: "Работает",
+      route_id: "d39aee5c-1f6c-4d0c-bafb-cf9b52d569a7",
+      crew_id: null,
+    },
+    {
+      trolleybus_id: "9166c75b-ac34-415d-a6a4-3dba939433e3",
+      number: "Т 3342",
+      status: "Обслуживается",
+      route_id: null,
+      crew_id: null,
+    },
+    {
+      trolleybus_id: "5911484a-80b8-4743-9e7f-d13ed66059bc",
+      number: "Т 217",
+      status: "В депо",
+      route_id: "6cda71cc-0174-46ed-a688-e21ac85128fd",
+      crew_id: "541c027f-7e08-4acb-89f7-3144875f018b",
+    },
+    {
+      trolleybus_id: "c5c8a901-cdb3-46ee-aa9e-bbc967ee8e27",
+      number: "Т 409",
+      status: "Работает",
+      route_id: "26bdc966-4972-408d-bce8-ae7ed962065f",
+      crew_id: "01398d2b-a957-492e-8eef-36aa4524d383",
+    },
+    {
+      trolleybus_id: "5ac1557a-06cf-4f57-a5df-3e0b080f17e6",
+      number: "Т 891",
+      status: "В депо",
+      route_id: "74b0ae03-aa97-4e39-b6e2-f35ef2b27b76",
+      crew_id: "5de50d32-35a1-42cf-b682-d8c396647766",
+    },
+    {
+      trolleybus_id: "0bb65d04-dd52-4f21-a7ab-402abb22e238",
+      number: "Т 543",
+      status: "Работает",
+      route_id: "7244a13f-ee14-414c-9955-d0d853d26b7b",
+      crew_id: "d45025b0-17ee-4549-adc0-62167b0c3f9d",
+    },
+    {
+      trolleybus_id: "9c3d8afb-91fc-4def-94c1-a1270c87f97e",
+      number: "Т 715",
+      status: "Работает",
+      route_id: "80649e09-a7ea-447e-bdcc-ad84a46a1a27",
+      crew_id: null,
+    },
+    {
+      trolleybus_id: "ca4f8d3c-3afa-4d2a-9b6e-06de7553aad3",
+      number: "Т 777",
+      status: "В депо",
+      route_id: "d40e2200-0ebc-4a96-ac4c-2c282792a0e4",
+      crew_id: null,
+    },
+    {
+      trolleybus_id: "ea53bf3f-1c84-4022-b092-4c868f81097f",
+      number: "Т 2461",
+      status: "Работает",
+      route_id: "6fb28934-59f7-490f-8b21-c839bf92faa4",
+      crew_id: null,
+    },
+    {
+      trolleybus_id: "ed6108c9-02af-4c57-b4fa-cb400a61a589",
+      number: "Т 680",
+      status: "Обслуживается",
+      route_id: null,
+      crew_id: null,
+    },
+    {
+      trolleybus_id: "f5a5f519-04c1-4604-831d-3537695c4dbc",
+      number: "Т 1944",
+      status: "Работает",
+      route_id: "6ee00d39-9891-4baf-bd11-de3b0a999357",
+      crew_id: null,
+    },
+  ]);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const [completeDialog, setCompleteDialog] =
+    useState<MaintenanceRecord | null>(null);
+  const [trolleybusCanWork, setTrolleybusCanWork] = useState<boolean>(false);
 
   const inputC = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -292,6 +380,7 @@ const Maintenance: React.FC = () => {
       if (dialogMode === "create") {
         await api.post("/maintenance-record", recordFormData);
         setOkDialog("Запись о ТО успешно создана");
+        await fetchAllTrolleybuses();
       } else {
         await api.put(`/maintenance-record/${currentItemId}`, recordFormData);
         setOkDialog("Запись о ТО успешно изменена");
@@ -324,6 +413,23 @@ const Maintenance: React.FC = () => {
       setOkDialog("Запись успешно удалена");
     } catch (error) {
       setOkDialog("Не удалось удалить запись");
+    }
+  };
+
+  const handleCompleteRecord = async () => {
+    try {
+      const record = completeDialog;
+      if (!record) return;
+      await api.put(`/maintenance-record/complete/${record.m_record_id}`, {
+        trolleybus_can_work: trolleybusCanWork,
+        trolleybus_id: record.trolleybus_id,
+      });
+      setCompleteDialog(null);
+      setOkDialog("Статус троллейбуса и записи успешно изменены");
+      await fetchRecords();
+      await fetchAllTrolleybuses();
+    } catch (error) {
+      setOkDialog("Не удалось обновить статус троллейбуса и записи");
     }
   };
 
@@ -436,6 +542,7 @@ const Maintenance: React.FC = () => {
                     <TableCell>ID</TableCell>
                     <TableCell>Текст</TableCell>
                     <TableCell>Запланировано</TableCell>
+                    <TableCell>Завершено</TableCell>
                     <TableCell>Действия</TableCell>
                   </TableRow>
                 </TableHead>
@@ -450,6 +557,18 @@ const Maintenance: React.FC = () => {
                         <Checkbox checked={record.planned} disabled />
                       </TableCell>
                       <TableCell>
+                        <Checkbox checked={record.completed} disabled />
+                      </TableCell>
+                      <TableCell>
+                        {!record.completed && (
+                          <Tooltip title="Заврешить ТО">
+                            <IconButton
+                              onClick={() => setCompleteDialog(record)}
+                            >
+                              <CheckIcon color="primary" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <IconButton onClick={() => handleRecordEdit(record)}>
                           <EditIcon color="primary" />
                         </IconButton>
@@ -587,7 +706,7 @@ const Maintenance: React.FC = () => {
               >
                 {allCrews.map((crew) => (
                   <MenuItem key={crew.m_crew_id} value={crew.m_crew_id}>
-                    {crew.name} ({crew.m_crew_id.substring(0, 8)}...)
+                    {crew.name} ({crew.status})
                   </MenuItem>
                 ))}
               </Select>
@@ -610,14 +729,21 @@ const Maintenance: React.FC = () => {
                 }
                 label="Троллейбус"
               >
-                {allTrolleybuses.map((trolleybus) => (
-                  <MenuItem
-                    key={trolleybus.trolleybus_id}
-                    value={trolleybus.trolleybus_id}
-                  >
-                    {trolleybus.model} ({trolleybus.number})
-                  </MenuItem>
-                ))}
+                {allTrolleybuses
+                  .filter((t) => {
+                    return (
+                      t.status ===
+                      (!recordFormData.planned ? "Работает" : "В депо")
+                    );
+                  })
+                  .map((trolleybus) => (
+                    <MenuItem
+                      key={trolleybus.trolleybus_id}
+                      value={trolleybus.trolleybus_id}
+                    >
+                      {trolleybus.number} ({trolleybus.status})
+                    </MenuItem>
+                  ))}
               </Select>
               {formErrors.trolleybus_id && (
                 <Alert severity="error" sx={{ mt: 1 }}>
@@ -650,6 +776,24 @@ const Maintenance: React.FC = () => {
           >
             Удалить
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!completeDialog} onClose={() => setCompleteDialog(null)}>
+        <DialogTitle>Завершение ТО</DialogTitle>
+        <DialogContent>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={trolleybusCanWork}
+                onChange={(e) => setTrolleybusCanWork(e.target.checked)}
+              />
+            }
+            label={`Троллейбус ${completeDialog?.Trolleybus?.number} может продолжать работу`}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleCompleteRecord()}>Завершить</Button>
         </DialogActions>
       </Dialog>
 
