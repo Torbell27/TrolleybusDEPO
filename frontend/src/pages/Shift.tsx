@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   Box,
@@ -36,7 +36,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
-const DEFAULT_LIMIT = 4;
+const DEFAULT_LIMIT = 8;
 
 const ShiftPage = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -63,6 +63,11 @@ const ShiftPage = () => {
     fetchCrews();
     fetchShifts(pageShifts);
   }, [pageShifts]);
+
+  const inputC = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (inputC.current) inputC.current.focus();
+  }, []);
 
   const fetchCrews = async () => {
     const res = await api.get("/shift/crew");
@@ -150,6 +155,7 @@ const ShiftPage = () => {
               value={date}
               minDate={startOfToday()}
               onChange={setDate}
+              inputRef={inputC}
               renderInput={(params) => <TextField fullWidth {...params} />}
             />
             <TextField
