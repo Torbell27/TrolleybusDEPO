@@ -107,7 +107,7 @@ const ShiftPage = () => {
   const handleDeleteShift = async (shiftId) => {
     await api.delete(`/shift/${shiftId}`);
     setShowDeleteDialog(false);
-    fetchShifts(pageShifts); // перезагрузка списка
+    fetchShifts(pageShifts);
   };
 
   const handleEndShift = async () => {
@@ -116,7 +116,7 @@ const ShiftPage = () => {
     const body: any = { completed: true };
 
     if (unplannedEnd && manualEndHour) {
-      const now = new Date();
+      const now = new Date(endNowShiftTime);
       now.setHours(parseInt(manualEndHour), 0);
       body.end_time = now.toISOString();
     }
