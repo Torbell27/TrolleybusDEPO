@@ -235,3 +235,96 @@ export const deleteCrew = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateDriver = async (req, res, next) => {
+  try {
+    const { crewId } = req.params;
+    const { newDriverId } = req.body;
+
+    const crew = await Crew.findByPk(crewId);
+    if (!crew) {
+      return res.status(404).json({ message: "Экипаж не найден" });
+    }
+
+    const oldDriver = await Driver.findOne({ where: { crew_id: crewId } });
+
+    if (oldDriver) {
+      await Driver.update(
+        { crew_id: null },
+        { where: { user_id: oldDriver.user_id } }
+      );
+    }
+
+    await Driver.update(
+      { crew_id: crewId },
+      { where: { user_id: newDriverId } }
+    );
+
+    res.status(200).json({ message: "Водитель успешно обновлён" });
+  } catch (error) {
+    console.error("Ошибка при обновлении:", error);
+    next(error);
+  }
+};
+
+export const updateConductor = async (req, res, next) => {
+  try {
+    const { crewId } = req.params;
+    const { newConductorId } = req.body;
+
+    const crew = await Crew.findByPk(crewId);
+    if (!crew) {
+      return res.status(404).json({ message: "Экипаж не найден" });
+    }
+
+    const oldConductor = await Conductor.findOne({ where: { crew_id: crewId } });
+
+    if (oldConductor) {
+      await Conductor.update(
+        { crew_id: null },
+        { where: { user_id: oldConductor.user_id } }
+      );
+    }
+
+    await Conductor.update(
+      { crew_id: crewId },
+      { where: { user_id: newConductorId } }
+    );
+
+    res.status(200).json({ message: "Кондуктор успешно обновлён" });
+  } catch (error) {
+    console.error("Ошибка при обновлении:", error);
+    next(error);
+  }
+};
+
+export const updateTrolleybus = async (req, res, next) => {
+  try {
+    const { crewId } = req.params;
+    const { newTrolleybusId } = req.body;
+
+    const crew = await Crew.findByPk(crewId);
+    if (!crew) {
+      return res.status(404).json({ message: "Экипаж не найден" });
+    }
+
+    const oldTrolleybus = await Trolleybus.findOne({ where: { crew_id: crewId } });
+
+    if (oldTrolleybus) {
+      await Trolleybus.update(
+        { crew_id: null },
+        { where: { trolleybus_id: oldTrolleybus.trolleybus_id } }
+      );
+    }
+
+    await Trolleybus.update(
+      { crew_id: crewId },
+      { where: { trolleybus_id: newTrolleybusId } }
+    );
+
+    res.status(200).json({ message: "Троллейбус успешно обновлён" });
+  } catch (error) {
+    console.error("Ошибка при обновлении:", error);
+    next(error);
+  }
+};

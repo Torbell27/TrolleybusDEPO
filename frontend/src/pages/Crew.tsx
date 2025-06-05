@@ -73,7 +73,7 @@ const Crew: React.FC = () => {
   const [pageTrolleybuses, setPageTrolleybuses] = useState<number>(1);
   const [searchTrolleybuses, setSearchTrolleybuses] = useState<string>("");
   const [selectedTrolleybus, setSelectedTrolleybus] =
-    useState<Trolleybus | null>(null);
+  useState<Trolleybus | null>(null);
   const [loadingTrolleybuses, setLoadingTrolleybuses] = useState<boolean>(true);
 
   const [submitting, setSubmitting] = useState(false);
@@ -91,7 +91,7 @@ const Crew: React.FC = () => {
   const [loadingModalDrivers, setLoadingModalDrivers] = useState(false);
   const [conductorModalOpen, setConductorModalOpen] = useState(false);
   const [loadingModalConductors, setLoadingModalConductors] = useState(false);
-  const [trolleybuseModalOpen, setTrolleybuseModalOpen] = useState(false);
+  const [trolleybusModalOpen, setTrolleybusModalOpen] = useState(false);
   const [loadingModalTrolleybuses, setLoadingModalTrolleybuses] = useState(false);
 
   const inputC = useRef<HTMLInputElement>(null);
@@ -142,7 +142,7 @@ const Crew: React.FC = () => {
   };
 
   const fetchTrolleybuses = async (pageNumber: number, query: string) => {
-    if (trolleybuseModalOpen) setLoadingModalTrolleybuses(true);
+    if (trolleybusModalOpen) setLoadingModalTrolleybuses(true);
 
     setLoadingTrolleybuses(true);
     try {
@@ -230,6 +230,13 @@ const Crew: React.FC = () => {
   const totalPagesTrolleybuses = Math.ceil(totalTrolleybuses / DEFAULT_LIMIT);
   const totalPagesCrews = Math.ceil(totalCrews / DEFAULT_LIMIT);
 
+  const fetchAll = () => {
+      fetchCrews(pageCrews, searchCrews);
+      fetchConductors(pageConductors, searchConductors);
+      fetchDrivers(pageDrivers, searchDrivers);
+      fetchTrolleybuses(pageTrolleybuses, searchTrolleybuses);
+  }
+
   const handleSubmit = async () => {
     if (!selectedConductor || !selectedDriver || !selectedTrolleybus) return;
 
@@ -244,10 +251,7 @@ const Crew: React.FC = () => {
       setSelectedConductor(null);
       setSelectedDriver(null);
       setSelectedTrolleybus(null);
-      fetchCrews(pageConductors, searchConductors);
-      fetchConductors(pageConductors, searchConductors);
-      fetchDrivers(pageDrivers, searchDrivers);
-      fetchTrolleybuses(pageTrolleybuses, searchTrolleybuses);
+      fetchAll();
     } catch (error) {
       console.error("Ошибка при назначении экипажа:", error);
       setErrorMessage("Ошибка при создании экипажа.");
@@ -261,10 +265,7 @@ const Crew: React.FC = () => {
       await axios.delete(`${API_URL}/crew/deleteCrew/${crewId}`);
       setCrews((prev) => prev.filter((crew) => crew.crew_id !== crewId));
       setSuccessMessage("Экипаж успешно удален");
-      fetchCrews(pageConductors, searchConductors);
-      fetchConductors(pageConductors, searchConductors);
-      fetchDrivers(pageDrivers, searchDrivers);
-      fetchTrolleybuses(pageTrolleybuses, searchTrolleybuses);
+      fetchAll();
     } catch (error) {
       console.error("Ошибка при удалении экипажа:", error);
       setErrorMessage("Не удалось удалить экипаж");
@@ -274,11 +275,21 @@ const Crew: React.FC = () => {
   const handleEditCrewRole = (crew: any, role: "Driver" | "Conductor" | "Trolleybus") => {
     if (role === "Driver") {
       setCrewToEdit(crew);
+      setSearchDrivers("");
+      setPageDrivers(1);
       setDriverModalOpen(true);
     }
     if (role === "Conductor") {
       setCrewToEdit(crew);
+      setSearchConductors("");
+      setPageConductors(1);
       setConductorModalOpen(true);
+    }
+    if (role === "Trolleybus") {
+      setCrewToEdit(crew);
+      setSearchTrolleybuses("");
+      setPageTrolleybuses(1);
+      setTrolleybusModalOpen(true);
     }
   };
 
@@ -286,18 +297,50 @@ const Crew: React.FC = () => {
     if (!crewToEdit) return;
 
     try {
-      await axios.put(`${API_URL}/crew/updateDriver`, {
-        crewId: crewToEdit.crew_id,
+      await axios.put(`${API_URL}/crew/updateDriver/${crewToEdit.crew_id}`, {
         newDriverId: newDriver.user_id,
       });
-      setSuccessMessage("Водитель обновлен");
+      setSuccessMessage("Водитель успешно обновлен");
       setDriverModalOpen(false);
       setCrewToEdit(null);
-      const response = await axios.get<{ crews: any[] }>(`${API_URL}/crew/getCrews`);
-      setCrews(response.data.crews);
+      fetchAll();
     } catch (error) {
       console.error("Ошибка при обновлении водителя:", error);
       setErrorMessage("Не удалось обновить водителя");
+    }
+  };
+
+  const handleChangeTrolleybus = async (newTrolleybus: Trolleybus) => {
+    if (!crewToEdit) return;
+
+    try {
+      await axios.put(`${API_URL}/crew/updateTrolleybus/${crewToEdit.crew_id}`, {
+        newTrolleybusId: newTrolleybus.trolleybus_id,
+      });
+      setSuccessMessage("Троллейбус успешно обновлен");
+      setTrolleybusModalOpen(false);
+      setCrewToEdit(null);
+      fetchAll();
+    } catch (error) {
+      console.error("Ошибка при обновлении троллейбуса:", error);
+      setErrorMessage("Не удалось обновить троллейбус");
+    }
+  };
+
+  const handleChangeConductor = async (newConductor: Person) => {
+    if (!crewToEdit) return;
+
+    try {
+      await axios.put(`${API_URL}/crew/updateConductor/${crewToEdit.crew_id}`, {
+        newConductorId: newConductor.user_id,
+      });
+      setSuccessMessage("Кондуктор успешно обновлен");
+      setConductorModalOpen(false);
+      setCrewToEdit(null);
+      fetchAll();
+    } catch (error) {
+      console.error("Ошибка при обновлении кондуктора:", error);
+      setErrorMessage("Не удалось обновить кондуктора");
     }
   };
 
@@ -520,7 +563,7 @@ const Crew: React.FC = () => {
       )}
 
       {/* Вкладка Экипажи */}
-<Dialog open={driverModalOpen} onClose={() => setDriverModalOpen(false)} fullWidth maxWidth="sm">
+<Dialog open={driverModalOpen} onClose={() => {setDriverModalOpen(false); setSearchDrivers(""); setPageDrivers(1);}} fullWidth maxWidth="sm">
   <DialogTitle>Выберите нового водителя</DialogTitle>
   <DialogContent dividers>
     <TextField
@@ -569,11 +612,11 @@ const Crew: React.FC = () => {
     )}
   </DialogContent>
   <DialogActions>
-    <Button onClick={() => setDriverModalOpen(false)}>Отмена</Button>
+    <Button onClick={() => {setDriverModalOpen(false); setSearchDrivers(""); setPageDrivers(1);}}>Отмена</Button>
   </DialogActions>
 </Dialog>
 
-<Dialog open={conductorModalOpen} onClose={() => setConductorModalOpen(false)} fullWidth maxWidth="sm">
+<Dialog open={conductorModalOpen} onClose={() => {setConductorModalOpen(false); setSearchConductors(""); setPageConductors(1);}} fullWidth maxWidth="sm">
   <DialogTitle>Выберите нового кондуктора</DialogTitle>
   <DialogContent dividers>
     <TextField
@@ -622,7 +665,60 @@ const Crew: React.FC = () => {
     )}
   </DialogContent>
   <DialogActions>
-    <Button onClick={() => setConductorModalOpen(false)}>Отмена</Button>
+    <Button onClick={() => {setConductorModalOpen(false); setSearchConductors(""); setPageConductors(1);}}>Отмена</Button>
+  </DialogActions>
+</Dialog>
+
+<Dialog open={trolleybusModalOpen} onClose={() => {setTrolleybusModalOpen(false); setSearchTrolleybuses(""); setPageTrolleybuses(1);}} fullWidth maxWidth="sm">
+  <DialogTitle>Выберите новый автобус</DialogTitle>
+  <DialogContent dividers>
+    <TextField
+      fullWidth
+      variant="outlined"
+      placeholder="Поиск по имени"
+      value={searchTrolleybuses}
+      onChange={(e) => {
+        setSearchTrolleybuses(e.target.value);
+        setPageTrolleybuses(1);
+      }}
+      sx={{ mb: 2 }}
+    />
+
+    {loadingModalTrolleybuses ? (
+      <Box display="flex" justifyContent="center" mt={2}>
+        <CircularProgress />
+      </Box>
+    ) : trolleybuses.length === 0 ? (
+      <Typography>Нет свободных троллейбусов</Typography>) : (
+      <>
+        <List>
+          {trolleybuses.map((trolleybus) => (
+            <ListItem disablePadding key={trolleybus.trolleybus_id}>
+              <ListItemButton
+                onClick={() => handleChangeTrolleybus(trolleybus)}
+                selected={crewToEdit?.Trolleybus?.trolleybus_id === trolleybus.trolleybus_id}
+              >
+                {trolleybus.number}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+
+        {totalPagesTrolleybuses > 1 && (
+          <Box mt={2} display="flex" justifyContent="center">
+            <Pagination
+              count={totalPagesTrolleybuses}
+              page={pageTrolleybuses}
+              onChange={(_, value) => setPageTrolleybuses(value)}
+              color="primary"
+            />
+          </Box>
+        )}
+      </>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => {setTrolleybusModalOpen(false); setSearchTrolleybuses(""); setPageTrolleybuses(1);}}>Отмена</Button>
   </DialogActions>
 </Dialog>
 
