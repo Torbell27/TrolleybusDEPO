@@ -5,6 +5,7 @@ import Driver from "../models/Driver.js";
 import Trolleybus from "../models/Trolleybus.js";
 import User from "../models/User.js";
 import { v4 as uuidv4 } from "uuid";
+import { Op } from "sequelize";
 
 // Create a new shift
 export const createShift = async (req, res) => {
@@ -15,17 +16,62 @@ export const createShift = async (req, res) => {
       return res.status(400).json({ error: "Crew ID is required" });
     }
 
+    // Проверка наличия временных меток
+    if (!start_time || !end_time) {
+      return res
+        .status(400)
+        .json({ error: "Both start_time and end_time are required" });
+    }
+
+    // Преобразование в Date объекты
+    const startTime = new Date(start_time);
+    const endTime = new Date(end_time);
+
+    // Проверка валидности дат
+    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+
+    // Проверка что время начала раньше времени окончания
+    if (startTime >= endTime) {
+      return res.status(400).json({
+        error: "Start time must be before end time",
+      });
+    }
+
     const crew = await Crew.findByPk(crew_id);
     if (!crew) {
       return res.status(404).json({ error: "Crew not found" });
     }
 
-    // Use new Date() which includes timezone information
+    // Проверка на пересечение с другими сменами экипажа
+    const existingShift = await Shift.findOne({
+      where: {
+        crew_id,
+        [Op.or]: [
+          {
+            start_time: { [Op.lt]: endTime },
+            end_time: { [Op.gt]: startTime },
+          },
+          {
+            completed: false,
+            end_time: null,
+          },
+        ],
+      },
+    });
+
+    if (existingShift) {
+      return res.status(400).json({
+        error: "Crew already has a shift during this time period",
+      });
+    }
+
     const shift = await Shift.create({
       shift_id: uuidv4(),
       first_shift: first_shift || false,
-      start_time,
-      end_time,
+      start_time: startTime,
+      end_time: endTime,
       crew_id,
       completed: false,
     });
@@ -78,7 +124,13 @@ export const endShift = async (req, res) => {
 // Get all shifts with proper date formatting
 export const getAllShifts = async (req, res) => {
   try {
-    const shifts = await Shift.findAll({
+    const DEFAULT_LIMIT = 4;
+    const { page = "0" } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const offset = pageNumber * DEFAULT_LIMIT;
+
+    const { rows: shifts, count: total } = await Shift.findAndCountAll({
       include: [
         {
           model: Crew,
@@ -118,6 +170,8 @@ export const getAllShifts = async (req, res) => {
         },
       ],
       order: [["start_time", req.query.sort === "asc" ? "ASC" : "DESC"]],
+      limit: DEFAULT_LIMIT,
+      offset,
     });
 
     const formattedShifts = shifts.map((shift) => ({
@@ -126,7 +180,7 @@ export const getAllShifts = async (req, res) => {
       end_time: shift.end_time ? shift.end_time.toISOString() : null,
     }));
 
-    return res.status(200).json(formattedShifts);
+    return res.status(200).json({ formattedShifts, total });
   } catch (error) {
     console.error("Error getting shifts:", error);
     return res.status(500).json({ error: "Internal server error" });

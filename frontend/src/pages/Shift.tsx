@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Pagination,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -35,6 +36,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
+const DEFAULT_LIMIT = 4;
 
 const ShiftPage = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -54,20 +56,29 @@ const ShiftPage = () => {
   const [manualEndHour, setManualEndHour] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedShiftId, setSelectedShiftId] = useState(null);
+  const [pageShifts, setPageShifts] = useState<number>(1);
+  const [totalShifts, setTotalShifts] = useState<number>(0);
 
   useEffect(() => {
     fetchCrews();
-    fetchShifts();
-  }, []);
+    fetchShifts(pageShifts);
+  }, [pageShifts]);
 
   const fetchCrews = async () => {
     const res = await api.get("/shift/crew");
     setCrews(res.data.crews || []);
   };
 
-  const fetchShifts = async () => {
-    const res = await api.get(`/shift?sort=${sortOrder}`);
-    setShifts(res.data);
+  const fetchShifts = async (pageNumber: number) => {
+    try {
+      const res = await api.get(`/shift?sort=${sortOrder}`, {
+        params: { page: pageNumber - 1 },
+      });
+      setShifts(res.data.formattedShifts);
+      setTotalShifts(res.data.total);
+    } catch (error) {
+      console.error("Ошибка при получении кондукторов");
+    }
   };
 
   const handleCreateShift = async (
@@ -90,13 +101,13 @@ const ShiftPage = () => {
       start_time: startDate.toISOString(),
       end_time: endDate.toISOString(),
     });
-    fetchShifts();
+    fetchShifts(pageShifts);
   };
 
   const handleDeleteShift = async (shiftId) => {
     await api.delete(`/shift/${shiftId}`);
     setShowDeleteDialog(false);
-    fetchShifts(); // перезагрузка списка
+    fetchShifts(pageShifts); // перезагрузка списка
   };
 
   const handleEndShift = async () => {
@@ -114,7 +125,7 @@ const ShiftPage = () => {
     setEndNowShiftId(null);
     setUnplannedEnd(false);
     setManualEndHour("");
-    fetchShifts();
+    fetchShifts(pageShifts);
   };
 
   const crewsOptions = crews.map((crew) => (
@@ -122,6 +133,7 @@ const ShiftPage = () => {
       Экипаж: {crew.Driver?.User?.name} / {crew.Conductor?.User?.name}
     </MenuItem>
   ));
+  const totalPagesShifts = Math.ceil(totalShifts / DEFAULT_LIMIT);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -220,7 +232,7 @@ const ShiftPage = () => {
                 <TableCell
                   onClick={() => {
                     setSortOrder(sortOrder === "asc" ? "desc" : "asc"),
-                      fetchShifts();
+                      fetchShifts(pageShifts);
                   }}
                   style={{ cursor: "pointer" }}
                 >
@@ -277,6 +289,16 @@ const ShiftPage = () => {
               ))}
             </TableBody>
           </Table>
+          {totalPagesShifts > 1 && (
+            <Box mt={3} display="flex" justifyContent="center">
+              <Pagination
+                count={totalPagesShifts}
+                page={pageShifts}
+                onChange={(_, value) => setPageShifts(value)}
+                color="primary"
+              />
+            </Box>
+          )}
           <Dialog
             open={showDeleteDialog}
             onClose={() => setShowDeleteDialog(false)}
