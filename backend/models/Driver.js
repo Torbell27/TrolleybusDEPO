@@ -29,6 +29,6 @@ const Driver = sequelize.define(
 
 Driver.belongsTo(User, { foreignKey: "user_id" });
 Driver.belongsTo(Crew, { foreignKey: "crew_id" });
-//User.hasMany(Driver, { foreignKey: 'user_id' });
+Crew.hasOne(Driver, { foreignKey: "crew_id" });
 
 export default Driver;
