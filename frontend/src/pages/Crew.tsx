@@ -28,8 +28,6 @@ import {
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Add as AddIcon,
-  Search as SearchIcon,
 } from "@mui/icons-material";
 
 interface Person {
@@ -88,9 +86,13 @@ const Crew: React.FC = () => {
   const [searchCrews, setSearchCrews] = useState<string>("");
   const [pageCrews, setPageCrews] = useState<number>(1);
 
-  const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [crewToEdit, setCrewToEdit] = useState<any | null>(null);
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [loadingModalDrivers, setLoadingModalDrivers] = useState(false);
+  const [conductorModalOpen, setConductorModalOpen] = useState(false);
+  const [loadingModalConductors, setLoadingModalConductors] = useState(false);
+  const [trolleybuseModalOpen, setTrolleybuseModalOpen] = useState(false);
+  const [loadingModalTrolleybuses, setLoadingModalTrolleybuses] = useState(false);
 
   const inputC = useRef<HTMLInputElement>(null);
   const API_URL = import.meta.env.VITE_API_URL;
@@ -102,6 +104,8 @@ const Crew: React.FC = () => {
   }, []);
 
   const fetchConductors = async (pageNumber: number, query: string) => {
+    if (conductorModalOpen) setLoadingModalConductors(true);
+
     setLoadingConductors(true);
     try {
       const response = await axios.get<{ conductors: Person[]; total: number }>(
@@ -114,11 +118,12 @@ const Crew: React.FC = () => {
       console.error("Ошибка при получении кондукторов:", error);
     } finally {
       setLoadingConductors(false);
+      setLoadingModalConductors(false);
     }
   };
 
   const fetchDrivers = async (pageNumber: number, query: string) => {
-    if (driverModalOpen) setLoadingModalDrivers(true)
+    if (driverModalOpen) setLoadingModalDrivers(true);
 
     setLoadingDrivers(true);
     try {
@@ -137,6 +142,8 @@ const Crew: React.FC = () => {
   };
 
   const fetchTrolleybuses = async (pageNumber: number, query: string) => {
+    if (trolleybuseModalOpen) setLoadingModalTrolleybuses(true);
+
     setLoadingTrolleybuses(true);
     try {
       const response = await axios.get<{
@@ -151,6 +158,7 @@ const Crew: React.FC = () => {
       console.error("Ошибка при получении троллейбусов:", error);
     } finally {
       setLoadingTrolleybuses(false);
+      setLoadingModalTrolleybuses(false);
     }
   };
 
@@ -267,6 +275,10 @@ const Crew: React.FC = () => {
     if (role === "Driver") {
       setCrewToEdit(crew);
       setDriverModalOpen(true);
+    }
+    if (role === "Conductor") {
+      setCrewToEdit(crew);
+      setConductorModalOpen(true);
     }
   };
 
@@ -518,7 +530,7 @@ const Crew: React.FC = () => {
       value={searchDrivers}
       onChange={(e) => {
         setSearchDrivers(e.target.value);
-        setPageDrivers(1); // сбрасываем на первую страницу при поиске
+        setPageDrivers(1);
       }}
       sx={{ mb: 2 }}
     />
@@ -527,7 +539,8 @@ const Crew: React.FC = () => {
       <Box display="flex" justifyContent="center" mt={2}>
         <CircularProgress />
       </Box>
-    ) : (
+    ) : drivers.length === 0 ? (
+      <Typography>Нет свободных водителей</Typography>) : (
       <>
         <List>
           {drivers.map((driver) => (
@@ -560,7 +573,58 @@ const Crew: React.FC = () => {
   </DialogActions>
 </Dialog>
 
+<Dialog open={conductorModalOpen} onClose={() => setConductorModalOpen(false)} fullWidth maxWidth="sm">
+  <DialogTitle>Выберите нового кондуктора</DialogTitle>
+  <DialogContent dividers>
+    <TextField
+      fullWidth
+      variant="outlined"
+      placeholder="Поиск по имени"
+      value={searchConductors}
+      onChange={(e) => {
+        setSearchConductors(e.target.value);
+        setPageConductors(1);
+      }}
+      sx={{ mb: 2 }}
+    />
 
+    {loadingModalConductors ? (
+      <Box display="flex" justifyContent="center" mt={2}>
+        <CircularProgress />
+      </Box>
+    ) : conductors.length === 0 ? (
+      <Typography>Нет свободных кондукторов</Typography>) : (
+      <>
+        <List>
+          {conductors.map((conductor) => (
+            <ListItem disablePadding key={conductor.user_id}>
+              <ListItemButton
+                onClick={() => handleChangeConductor(conductor)}
+                selected={crewToEdit?.Conductor?.user_id === conductor.user_id}
+              >
+                {conductor.User.name}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+
+        {totalPagesConductors > 1 && (
+          <Box mt={2} display="flex" justifyContent="center">
+            <Pagination
+              count={totalPagesConductors}
+              page={pageConductors}
+              onChange={(_, value) => setPageConductors(value)}
+              color="primary"
+            />
+          </Box>
+        )}
+      </>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setConductorModalOpen(false)}>Отмена</Button>
+  </DialogActions>
+</Dialog>
 
 
 {tab === 1 && (
