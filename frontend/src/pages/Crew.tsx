@@ -675,7 +675,7 @@ const Crew: React.FC = () => {
     <TextField
       fullWidth
       variant="outlined"
-      placeholder="Поиск по имени"
+      placeholder="Поиск по номеру"
       value={searchTrolleybuses}
       onChange={(e) => {
         setSearchTrolleybuses(e.target.value);
@@ -729,6 +729,17 @@ const Crew: React.FC = () => {
     Список экипажей
   </Typography>
   <Paper sx={{ p: 2 }}>
+        <TextField
+      fullWidth
+      variant="outlined"
+      placeholder="Поиск по именам"
+      value={searchCrews}
+      onChange={(e) => {
+        setSearchCrews(e.target.value);
+        setPageCrews(1);
+      }}
+      sx={{ mb: 2 }}
+    />
     {loadingCrews ? (
       <Box display="flex" justifyContent="center" mt={4}>
         <CircularProgress />
