@@ -10,12 +10,27 @@ import {
   Paper,
   TextField,
   ListItemButton,
-  useTheme,
+  Tabs,
+  Tab,
   Snackbar,
   Alert,
   Button,
+  Table,
+  TableHead,
+  TableCell,
+  TableRow,
+  TableBody,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import styles from "../styles";
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Search as SearchIcon,
+} from "@mui/icons-material";
 
 interface Person {
   user_id: string;
@@ -34,8 +49,10 @@ const DEFAULT_LIMIT = 4;
 const DEBOUNCE_DELAY = 500;
 
 const Crew: React.FC = () => {
-  const theme = useTheme();
-  const classes = styles(theme);
+  const [tab, setTab] = useState(0);
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    setTab(newValue);
+  };
 
   const [conductors, setConductors] = useState<Person[]>([]);
   const [totalConductors, setTotalConductors] = useState<number>(0);
@@ -65,6 +82,16 @@ const Crew: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [crews, setCrews] = useState<any[]>([]);
+  const [loadingCrews, setLoadingCrews] = useState<boolean>(true);
+  const [totalCrews, setTotalCrews] = useState<number>(0);
+  const [searchCrews, setSearchCrews] = useState<string>("");
+  const [pageCrews, setPageCrews] = useState<number>(1);
+
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
+  const [crewToEdit, setCrewToEdit] = useState<any | null>(null);
+  const [loadingModalDrivers, setLoadingModalDrivers] = useState(false);
+
   const inputC = useRef<HTMLInputElement>(null);
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -91,6 +118,8 @@ const Crew: React.FC = () => {
   };
 
   const fetchDrivers = async (pageNumber: number, query: string) => {
+    if (driverModalOpen) setLoadingModalDrivers(true)
+
     setLoadingDrivers(true);
     try {
       const response = await axios.get<{ drivers: Person[]; total: number }>(
@@ -103,6 +132,7 @@ const Crew: React.FC = () => {
       console.error("Ошибка при получении водителей:", error);
     } finally {
       setLoadingDrivers(false);
+      setLoadingModalDrivers(false);
     }
   };
 
@@ -121,6 +151,21 @@ const Crew: React.FC = () => {
       console.error("Ошибка при получении троллейбусов:", error);
     } finally {
       setLoadingTrolleybuses(false);
+    }
+  };
+
+    const fetchCrews = async (pageNumber: number, query: string) => {
+    setLoadingCrews(true);
+    try {
+      const response = await axios.get<{ crews: any[]; total: number }>(`${API_URL}/crew/getCrews`, {
+        params: { page: pageNumber - 1, search: query },
+      });
+      setCrews(response.data.crews);
+      setTotalCrews(response.data.total);
+    } catch (error) {
+      console.error("Ошибка при получении экипажей:", error);
+    } finally {
+      setLoadingCrews(false);
     }
   };
 
@@ -149,6 +194,14 @@ const Crew: React.FC = () => {
   }, [searchTrolleybuses]);
 
   useEffect(() => {
+    const delay = setTimeout(() => {
+      setPageCrews(1);
+      fetchCrews(1, searchCrews);
+    }, DEBOUNCE_DELAY);
+    return () => clearTimeout(delay);
+  }, [searchCrews]);
+
+  useEffect(() => {
     fetchConductors(pageConductors, searchConductors);
   }, [pageConductors]);
 
@@ -160,9 +213,14 @@ const Crew: React.FC = () => {
     fetchTrolleybuses(pageTrolleybuses, searchTrolleybuses);
   }, [pageTrolleybuses]);
 
+  useEffect(() => {
+    fetchCrews(pageCrews, searchCrews);
+  }, [pageCrews]);
+
   const totalPagesConductors = Math.ceil(totalConductors / DEFAULT_LIMIT);
   const totalPagesDrivers = Math.ceil(totalDrivers / DEFAULT_LIMIT);
   const totalPagesTrolleybuses = Math.ceil(totalTrolleybuses / DEFAULT_LIMIT);
+  const totalPagesCrews = Math.ceil(totalCrews / DEFAULT_LIMIT);
 
   const handleSubmit = async () => {
     if (!selectedConductor || !selectedDriver || !selectedTrolleybus) return;
@@ -174,10 +232,11 @@ const Crew: React.FC = () => {
         driverId: selectedDriver.user_id,
         trolleybusId: selectedTrolleybus.trolleybus_id,
       });
-      setSuccessMessage("Экипаж успешно назначен!");
+      setSuccessMessage("Экипаж успешно создан");
       setSelectedConductor(null);
       setSelectedDriver(null);
       setSelectedTrolleybus(null);
+      fetchCrews(pageConductors, searchConductors);
       fetchConductors(pageConductors, searchConductors);
       fetchDrivers(pageDrivers, searchDrivers);
       fetchTrolleybuses(pageTrolleybuses, searchTrolleybuses);
@@ -189,245 +248,424 @@ const Crew: React.FC = () => {
     }
   };
 
+  const handleDeleteCrew = async (crewId: string) => {
+    try {
+      await axios.delete(`${API_URL}/crew/deleteCrew/${crewId}`);
+      setCrews((prev) => prev.filter((crew) => crew.crew_id !== crewId));
+      setSuccessMessage("Экипаж успешно удален");
+      fetchCrews(pageConductors, searchConductors);
+      fetchConductors(pageConductors, searchConductors);
+      fetchDrivers(pageDrivers, searchDrivers);
+      fetchTrolleybuses(pageTrolleybuses, searchTrolleybuses);
+    } catch (error) {
+      console.error("Ошибка при удалении экипажа:", error);
+      setErrorMessage("Не удалось удалить экипаж");
+    }
+  };
+
+  const handleEditCrewRole = (crew: any, role: "Driver" | "Conductor" | "Trolleybus") => {
+    if (role === "Driver") {
+      setCrewToEdit(crew);
+      setDriverModalOpen(true);
+    }
+  };
+
+  const handleChangeDriver = async (newDriver: Person) => {
+    if (!crewToEdit) return;
+
+    try {
+      await axios.put(`${API_URL}/crew/updateDriver`, {
+        crewId: crewToEdit.crew_id,
+        newDriverId: newDriver.user_id,
+      });
+      setSuccessMessage("Водитель обновлен");
+      setDriverModalOpen(false);
+      setCrewToEdit(null);
+      const response = await axios.get<{ crews: any[] }>(`${API_URL}/crew/getCrews`);
+      setCrews(response.data.crews);
+    } catch (error) {
+      console.error("Ошибка при обновлении водителя:", error);
+      setErrorMessage("Не удалось обновить водителя");
+    }
+  };
+
   return (
     <Box p={4}>
-      {/* Кондукторы */}
-      <Typography variant="h4" sx={classes.titleConductors} gutterBottom>
-        Кондукторы
-      </Typography>
-      <TextField
-        label="Поиск по имени"
-        value={searchConductors}
-        onChange={(e) => setSearchConductors(e.target.value)}
-        variant="outlined"
-        fullWidth
-        sx={classes.searchField}
-        inputRef={inputC}
-      />
-      <Typography
-        sx={[
-          classes.selectedText,
-          selectedConductor
-            ? classes.selectedTextSuccess
-            : classes.selectedTextDefault,
-        ]}
-      >
-        {selectedConductor ? (
-          <>
-            Выбран: <strong>{selectedConductor.User.name}</strong>
-          </>
-        ) : (
-          "Не выбран"
-        )}
-      </Typography>
-      {loadingConductors ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Paper elevation={3} sx={classes.paperList}>
-          <List>
-            {conductors.map((conductor) => (
-              <ListItem
-                disablePadding
-                key={conductor.user_id}
-                sx={[
-                  classes.listItem,
-                  conductor.user_id === selectedConductor?.user_id &&
-                    classes.selectedListItem,
-                ]}
-              >
-                <ListItemButton
-                  selected={conductor.user_id === selectedConductor?.user_id}
-                  onClick={() => setSelectedConductor(conductor)}
-                >
-                  {conductor.User.name}
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
-      {totalPagesConductors > 1 && (
-        <Box
-          mt={3}
-          display="flex"
-          justifyContent="center"
-          sx={classes.paginationBox}
-        >
-          <Pagination
-            count={totalPagesConductors}
-            page={pageConductors}
-            onChange={(_, value) => setPageConductors(value)}
-            color="primary"
-          />
+      <Tabs value={tab} onChange={handleTabChange}>
+        <Tab label="Создать экипаж" />
+        <Tab label="Экипажи" />
+      </Tabs>
+
+      {tab === 0 && (
+        <Box mt={4}>
+          {/* Кондукторы */}
+          <Typography variant="h4" gutterBottom>
+            Список кондукторов
+          </Typography>
+          <Paper sx={{ p: 2 }}>
+            <TextField
+              label="Поиск по имени"
+              value={searchConductors}
+              onChange={(e) => setSearchConductors(e.target.value)}
+              variant="outlined"
+              fullWidth
+              inputRef={inputC}
+            />
+            <Typography sx={{ p: 2 }}>
+              {selectedConductor ? (
+                <>Выбран: <strong>{selectedConductor.User.name}</strong></>
+              ) : "Не выбран"}
+            </Typography>
+            {loadingConductors ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : conductors.length === 0 ? (
+      <Typography>Нет свободных кондукторов</Typography>) : (
+              <Paper elevation={3}>
+                <List>
+                  {conductors.map((conductor) => (
+                    <ListItem disablePadding key={conductor.user_id}>
+                      <ListItemButton
+                        selected={conductor.user_id === selectedConductor?.user_id}
+                        onClick={() => setSelectedConductor(conductor)}
+                        sx={(theme) =>
+                          conductor.user_id === selectedConductor?.user_id
+                            ? {
+                                bgcolor: theme.palette.primary.main,
+                                color: "blue",
+                                borderRadius: 1,
+                                "&:hover": {
+                                  bgcolor: theme.palette.primary.dark,
+                                },
+                              }
+                            : {}
+                        }
+                      >
+                        {conductor.User.name}
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            )}
+            {totalPagesConductors > 1 && (
+              <Box mt={3} display="flex" justifyContent="center">
+                <Pagination
+                  count={totalPagesConductors}
+                  page={pageConductors}
+                  onChange={(_, value) => setPageConductors(value)}
+                  color="primary"
+                />
+              </Box>
+            )}
+          </Paper>
+
+          {/* Водители */}
+          <Typography variant="h4" gutterBottom mt={6}>
+            Список водителей
+          </Typography>
+          <Paper sx={{ p: 2 }}>
+            <TextField
+              label="Поиск по имени"
+              value={searchDrivers}
+              onChange={(e) => setSearchDrivers(e.target.value)}
+              variant="outlined"
+              fullWidth
+            />
+            <Typography sx={{ p: 2 }}>
+              {selectedDriver ? (
+                <>Выбран: <strong>{selectedDriver.User.name}</strong></>
+              ) : "Не выбран"}
+            </Typography>
+            {loadingDrivers ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : drivers.length === 0 ? (
+      <Typography>Нет свободных водителей</Typography>) : (
+              <Paper elevation={3}>
+                <List>
+                  {drivers.map((driver) => (
+                    <ListItem disablePadding key={driver.user_id}>
+                      <ListItemButton
+                        selected={driver.user_id === selectedDriver?.user_id}
+                        onClick={() => setSelectedDriver(driver)}
+                        sx={(theme) =>
+                          driver.user_id === selectedDriver?.user_id
+                            ? {
+                                bgcolor: theme.palette.primary.main,
+                                color: "blue",
+                                borderRadius: 1,
+                                "&:hover": {
+                                  bgcolor: theme.palette.primary.dark,
+                                },
+                              }
+                            : {}
+                        }
+                      >
+                        {driver.User.name}
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            )}
+            {totalPagesDrivers > 1 && (
+              <Box mt={3} display="flex" justifyContent="center">
+                <Pagination
+                  count={totalPagesDrivers}
+                  page={pageDrivers}
+                  onChange={(_, value) => setPageDrivers(value)}
+                  color="primary"
+                />
+              </Box>
+            )}
+          </Paper>
+
+          {/* Троллейбусы */}
+          <Typography variant="h4" gutterBottom mt={6}>
+            Список троллейбусов
+          </Typography>
+          <Paper sx={{ p: 2 }}>
+            <TextField
+              label="Поиск по номеру"
+              value={searchTrolleybuses}
+              onChange={(e) => setSearchTrolleybuses(e.target.value)}
+              variant="outlined"
+              fullWidth
+            />
+            <Typography sx={{ p: 2 }}>
+              {selectedTrolleybus ? (
+                <>
+                  Выбран: <strong>{selectedTrolleybus.number}</strong> ({selectedTrolleybus.status})
+                </>
+              ) : "Не выбран"}
+            </Typography>
+            {loadingTrolleybuses ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : trolleybuses.length === 0 ? (
+      <Typography>Нет свободных троллейбусов</Typography>) : (
+              <Paper elevation={3}>
+                <List>
+                  {trolleybuses.map((t) => (
+                    <ListItem disablePadding key={t.trolleybus_id}>
+                      <ListItemButton
+                        selected={t.trolleybus_id === selectedTrolleybus?.trolleybus_id}
+                        onClick={() => setSelectedTrolleybus(t)}
+                        sx={(theme) =>
+                          t.trolleybus_id === selectedTrolleybus?.trolleybus_id
+                            ? {
+                                bgcolor: theme.palette.primary.main,
+                                color: "blue",
+                                borderRadius: 1,
+                                "&:hover": {
+                                  bgcolor: theme.palette.primary.dark,
+                                },
+                              }
+                            : {}
+                        }
+                      >
+                        {t.number}
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            )}
+            {totalPagesTrolleybuses > 1 && (
+              <Box mt={3} display="flex" justifyContent="center">
+                <Pagination
+                  count={totalPagesTrolleybuses}
+                  page={pageTrolleybuses}
+                  onChange={(_, value) => setPageTrolleybuses(value)}
+                  color="primary"
+                />
+              </Box>
+            )}
+          </Paper>
+
+          {/* Кнопка подтверждения */}
+          <Box mt={5} display="flex" justifyContent="center">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              disabled={
+                !selectedConductor ||
+                !selectedDriver ||
+                !selectedTrolleybus ||
+                submitting
+              }
+              sx={{ px: 4, py: 1.5, fontSize: "16px" }}
+            >
+              {submitting ? "Назначение..." : "Создать экипаж"}
+            </Button>
+          </Box>
         </Box>
       )}
 
-      {/* Водители */}
-      <Typography variant="h4" sx={classes.titleDrivers} gutterBottom mt={6}>
-        Водители
-      </Typography>
-      <TextField
-        label="Поиск по имени"
-        value={searchDrivers}
-        onChange={(e) => setSearchDrivers(e.target.value)}
-        variant="outlined"
-        fullWidth
-        sx={classes.searchField}
-      />
-      <Typography
-        sx={[
-          classes.selectedText,
-          selectedDriver
-            ? classes.selectedTextSuccess
-            : classes.selectedTextDefault,
-        ]}
-      >
-        {selectedDriver ? (
-          <>
-            Выбран: <strong>{selectedDriver.User.name}</strong>
-          </>
-        ) : (
-          "Не выбран"
-        )}
-      </Typography>
-      {loadingDrivers ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Paper elevation={3} sx={classes.paperList}>
-          <List>
-            {drivers.map((driver) => (
-              <ListItem
-                disablePadding
-                key={driver.user_id}
-                sx={[
-                  classes.listItem,
-                  driver.user_id === selectedDriver?.user_id &&
-                    classes.selectedListItem,
-                ]}
-              >
-                <ListItemButton
-                  selected={driver.user_id === selectedDriver?.user_id}
-                  onClick={() => setSelectedDriver(driver)}
-                >
-                  {driver.User.name}
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
-      {totalPagesDrivers > 1 && (
-        <Box
-          mt={3}
-          display="flex"
-          justifyContent="center"
-          sx={classes.paginationBox}
-        >
-          <Pagination
-            count={totalPagesDrivers}
-            page={pageDrivers}
-            onChange={(_, value) => setPageDrivers(value)}
-            color="primary"
-          />
-        </Box>
-      )}
+      {/* Вкладка Экипажи */}
+<Dialog open={driverModalOpen} onClose={() => setDriverModalOpen(false)} fullWidth maxWidth="sm">
+  <DialogTitle>Выберите нового водителя</DialogTitle>
+  <DialogContent dividers>
+    <TextField
+      fullWidth
+      variant="outlined"
+      placeholder="Поиск по имени"
+      value={searchDrivers}
+      onChange={(e) => {
+        setSearchDrivers(e.target.value);
+        setPageDrivers(1); // сбрасываем на первую страницу при поиске
+      }}
+      sx={{ mb: 2 }}
+    />
 
-      {/* Троллейбусы */}
-      <Typography variant="h4" sx={classes.titleDrivers} gutterBottom mt={6}>
-        Троллейбусы
-      </Typography>
-      <TextField
-        label="Поиск по номеру"
-        value={searchTrolleybuses}
-        onChange={(e) => setSearchTrolleybuses(e.target.value)}
-        variant="outlined"
-        fullWidth
-        sx={classes.searchField}
-      />
-      <Typography
-        sx={[
-          classes.selectedText,
-          selectedTrolleybus
-            ? classes.selectedTextSuccess
-            : classes.selectedTextDefault,
-        ]}
-      >
-        {selectedTrolleybus ? (
-          <>
-            Выбран: <strong>{selectedTrolleybus.number}</strong> (
-            {selectedTrolleybus.status})
-          </>
-        ) : (
-          "Не выбран"
-        )}
-      </Typography>
-      {loadingTrolleybuses ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Paper elevation={3} sx={classes.paperList}>
-          <List>
-            {trolleybuses.map((t) => (
-              <ListItem
-                disablePadding
-                key={t.trolleybus_id}
-                sx={[
-                  classes.listItem,
-                  t.trolleybus_id === selectedTrolleybus?.trolleybus_id &&
-                    classes.selectedListItem,
-                ]}
-              >
-                <ListItemButton
-                  selected={
-                    t.trolleybus_id === selectedTrolleybus?.trolleybus_id
-                  }
-                  onClick={() => setSelectedTrolleybus(t)}
-                >
-                  {t.number}
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
-      {totalPagesTrolleybuses > 1 && (
-        <Box
-          mt={3}
-          display="flex"
-          justifyContent="center"
-          sx={classes.paginationBox}
-        >
-          <Pagination
-            count={totalPagesTrolleybuses}
-            page={pageTrolleybuses}
-            onChange={(_, value) => setPageTrolleybuses(value)}
-            color="primary"
-          />
-        </Box>
-      )}
-
-      {/* Кнопка подтверждения */}
-      <Box mt={5} display="flex" justifyContent="center">
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSubmit}
-          disabled={
-            !selectedConductor ||
-            !selectedDriver ||
-            !selectedTrolleybus ||
-            submitting
-          }
-          sx={{ px: 4, py: 1.5, fontSize: "16px" }}
-        >
-          {submitting ? "Назначение..." : "Создать экипаж"}
-        </Button>
+    {loadingModalDrivers ? (
+      <Box display="flex" justifyContent="center" mt={2}>
+        <CircularProgress />
       </Box>
+    ) : (
+      <>
+        <List>
+          {drivers.map((driver) => (
+            <ListItem disablePadding key={driver.user_id}>
+              <ListItemButton
+                onClick={() => handleChangeDriver(driver)}
+                selected={crewToEdit?.Driver?.user_id === driver.user_id}
+              >
+                {driver.User.name}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+
+        {totalPagesDrivers > 1 && (
+          <Box mt={2} display="flex" justifyContent="center">
+            <Pagination
+              count={totalPagesDrivers}
+              page={pageDrivers}
+              onChange={(_, value) => setPageDrivers(value)}
+              color="primary"
+            />
+          </Box>
+        )}
+      </>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setDriverModalOpen(false)}>Отмена</Button>
+  </DialogActions>
+</Dialog>
+
+
+
+
+{tab === 1 && (
+  <Box mt={4}>
+  <Typography variant="h4" gutterBottom>
+    Список экипажей
+  </Typography>
+  <Paper sx={{ p: 2 }}>
+    {loadingCrews ? (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    ) : crews.length === 0 ? (
+      <Typography>Нет экипажей</Typography>
+    ) : (
+      <Paper sx={{ p: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Кондуктор</TableCell>
+              <TableCell>Водитель</TableCell>
+              <TableCell>Троллейбус</TableCell>
+              <TableCell align="right">Действия</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {crews.map((crew) => (
+              <TableRow key={crew.crew_id}>
+              <TableCell>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <span>{crew.crew_id.substring(0, 8) || '—'}...</span>
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => handleEditCrewRole(crew, 'Conductor')}
+                >
+                  <span>{crew.Conductor?.User?.name || '—'}</span>
+                  <EditIcon />
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => handleEditCrewRole(crew, 'Driver')}
+                >
+                  <span>{crew.Driver?.User?.name || '—'}</span>
+                  <EditIcon />
+                </Box>
+              </TableCell>
+
+              <TableCell>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => handleEditCrewRole(crew, 'Trolleybus')}
+                >
+                  <span>{crew.Trolleybus?.number || '—'}</span>
+                  <EditIcon />
+                </Box>
+              </TableCell>
+                <TableCell align="right">
+                  <Button
+                    color="error"
+                    onClick={() => handleDeleteCrew(crew.crew_id)}
+                  >
+                  <DeleteIcon color="error" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+    )}
+        {totalPagesCrews > 1 && (
+        <Box mt={3} display="flex" justifyContent="center">
+          <Pagination
+            count={totalPagesCrews}
+            page={pageCrews}
+            onChange={(_, value) => setPageCrews(value)}
+            color="primary"
+          />
+        </Box>
+      )}
+    </Paper>
+    </Box>
+)}
+
 
       {/* Уведомления */}
       <Snackbar

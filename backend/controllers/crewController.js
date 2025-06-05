@@ -148,3 +148,90 @@ export const createCrew = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getCrews = async (req, res, next) => {
+  try {
+    const DEFAULT_LIMIT = 4;
+    const { page = "0", search = "" } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const offset = pageNumber * DEFAULT_LIMIT;
+
+    const searchCondition = search
+      ? {
+          [Op.or]: [
+            { "$Driver.User.name$": { [Op.iLike]: `%${search}%` } },
+            { "$Conductor.User.name$": { [Op.iLike]: `%${search}%` } },
+            { "$Trolleybus.number$": { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
+
+    const { rows: crews, count: total } = await Crew.findAndCountAll({
+      where: searchCondition,
+      include: [
+        {
+          model: Driver,
+          include: [
+            {
+              model: User,
+              as: "User",
+              attributes: ["name"],
+              required: true,
+            },
+          ],
+          required: true,
+        },
+        {
+          model: Conductor,
+          include: [
+            {
+              model: User,
+              as: "User",
+              attributes: ["name"],
+              required: true,
+            },
+          ],
+          required: true,
+        },
+        {
+          model: Trolleybus,
+          attributes: ["trolleybus_id", "number", "status"],
+          required: true,
+        },
+      ],
+      limit: DEFAULT_LIMIT,
+      offset,
+      distinct: true,
+    });
+
+    res.status(200).json({ crews, total });
+  } catch (error) {
+    console.error("Ошибка при получении экипажей:", error);
+    next(error);
+  }
+};
+
+export const deleteCrew = async (req, res, next) => {
+  try {
+    const { crewId } = req.params;
+
+    const crew = await Crew.findByPk(crewId);
+    if (!crew) {
+      return res.status(404).json({ message: "Экипаж не найден" });
+    }
+
+    await Promise.all([
+      Driver.update({ crew_id: null }, { where: { crew_id: crewId } }),
+      Conductor.update({ crew_id: null }, { where: { crew_id: crewId } }),
+      Trolleybus.update({ crew_id: null }, { where: { crew_id: crewId } }),
+    ]);
+
+    await Crew.destroy({ where: { crew_id: crewId } });
+
+    res.status(200).json({ message: "Экипаж успешно удалён" });
+  } catch (error) {
+    console.error("Ошибка при удалении экипажа:", error);
+    next(error);
+  }
+};

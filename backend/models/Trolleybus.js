@@ -38,5 +38,6 @@ const Trolleybus = sequelize.define(
 
 Trolleybus.belongsTo(Route, { foreignKey: "route_id" });
 Trolleybus.belongsTo(Crew, { foreignKey: "crew_id" });
+Crew.hasOne(Trolleybus, { foreignKey: "crew_id" });
 
 export default Trolleybus;

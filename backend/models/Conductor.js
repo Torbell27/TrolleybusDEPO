@@ -25,6 +25,6 @@ const Conductor = sequelize.define(
 
 Conductor.belongsTo(User, { foreignKey: "user_id" });
 Conductor.belongsTo(Crew, { foreignKey: "crew_id" });
-//User.hasMany(Conductor, { foreignKey: 'user_id' });
+Crew.hasOne(Conductor, { foreignKey: "crew_id" });
 
 export default Conductor;
