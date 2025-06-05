@@ -137,6 +137,7 @@ export const searchMaintenanceRecords = async (req, res) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [["text", "DESC"]],
+      distinct: true,
     });
 
     return res.status(200).json({

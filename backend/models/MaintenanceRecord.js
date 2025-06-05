@@ -30,6 +30,7 @@ const MaintenanceRecord = sequelize.define(
     },
     completed: {
       type: DataTypes.BOOLEAN(),
+      defaultValue: false,
       allowNull: false,
     },
   },
