@@ -28,6 +28,14 @@ import {
   Grid,
   useMediaQuery,
   Tooltip,
+  CircularProgress,
+  Chip,
+  Avatar,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -35,16 +43,23 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Check as CheckIcon,
+  Engineering as EngineeringIcon,
 } from "@mui/icons-material";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
+interface Technician {
+  user_id: string;
+  m_crew_id: string | null;
+}
+
 interface MaintenanceCrew {
   m_crew_id: string;
   status: string;
   name: string;
+  Technicians: Technician[];
 }
 
 interface Trolleybus {
@@ -72,11 +87,13 @@ const Maintenance: React.FC = () => {
   const [crewPage, setCrewPage] = useState(1);
   const [crewTotalPages, setCrewTotalPages] = useState(1);
   const [crewSearchStatus, setCrewSearchStatus] = useState("");
+  const [crewsLoading, setCrewsLoading] = useState(true);
 
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [recordPage, setRecordPage] = useState(1);
   const [recordTotalPages, setRecordTotalPages] = useState(1);
   const [recordSearchText, setRecordSearchText] = useState("");
+  const [recordsLoading, setRecordsLoading] = useState(true);
 
   const [okDialog, setOkDialog] = useState<string>("");
   const [crewDialogOpen, setCrewDialogOpen] = useState(false);
@@ -90,6 +107,7 @@ const Maintenance: React.FC = () => {
   const [crewFormData, setCrewFormData] = useState({
     status: "",
     name: "",
+    technician_ids: [] as string[],
   });
 
   const [recordFormData, setRecordFormData] = useState({
@@ -101,6 +119,10 @@ const Maintenance: React.FC = () => {
 
   const [allCrews, setAllCrews] = useState<MaintenanceCrew[]>([]);
   const [allTrolleybuses, setAllTrolleybuses] = useState<Trolleybus[]>([]);
+  const [allTechnicians, setAllTechnicians] = useState<Technician[]>([]);
+  const [availableTechnicians, setAvailableTechnicians] = useState<
+    Technician[]
+  >([]);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -114,6 +136,7 @@ const Maintenance: React.FC = () => {
   }, []);
 
   const fetchCrews = async () => {
+    setCrewsLoading(true);
     try {
       const response = await api.get("/maintenance-crew/search", {
         params: {
@@ -126,10 +149,13 @@ const Maintenance: React.FC = () => {
       setCrewTotalPages(response.data.pages);
     } catch (error) {
       setOkDialog("Не удалось загрузить ремонтные бригады");
+    } finally {
+      setCrewsLoading(false);
     }
   };
 
   const fetchRecords = async () => {
+    setRecordsLoading(true);
     try {
       const response = await api.get("/maintenance-record/search", {
         params: {
@@ -142,6 +168,8 @@ const Maintenance: React.FC = () => {
       setRecordTotalPages(response.data.pages);
     } catch (error) {
       setOkDialog("Не удалось загрузить записи о ТО");
+    } finally {
+      setRecordsLoading(false);
     }
   };
 
@@ -154,14 +182,25 @@ const Maintenance: React.FC = () => {
 
   const fetchAllTrolleybuses = async () => {
     try {
-      const response = await api.get("/trolleybuses");
+      const response = await api.get("/trolleybus");
       setAllTrolleybuses(response.data);
+    } catch (error) {}
+  };
+
+  const fetchAllTechnicians = async () => {
+    try {
+      const response = await api.get("/technician");
+      setAllTechnicians(response.data);
+      setAvailableTechnicians(
+        response.data.filter((t: Technician) => !t.m_crew_id)
+      );
     } catch (error) {}
   };
 
   useEffect(() => {
     fetchAllCrews();
     fetchAllTrolleybuses();
+    fetchAllTechnicians();
   }, []);
 
   const [searchCrewTimeout, setSearchCrewTimeout] = useState<number | null>(
@@ -206,7 +245,7 @@ const Maintenance: React.FC = () => {
 
   const handleCrewCreate = () => {
     setDialogMode("create");
-    setCrewFormData({ status: "", name: "" });
+    setCrewFormData({ status: "", name: "", technician_ids: [] });
     setFormErrors({});
     setCrewDialogOpen(true);
   };
@@ -214,7 +253,11 @@ const Maintenance: React.FC = () => {
   const handleCrewEdit = (crew: MaintenanceCrew) => {
     setDialogMode("edit");
     setCurrentItemId(crew.m_crew_id);
-    setCrewFormData({ status: crew.status, name: crew.name });
+    setCrewFormData({
+      status: crew.status,
+      name: crew.name,
+      technician_ids: crew.Technicians.map((t) => t.user_id),
+    });
     setFormErrors({});
     setCrewDialogOpen(true);
   };
@@ -222,6 +265,13 @@ const Maintenance: React.FC = () => {
   const handleCrewDelete = (id: string) => {
     setCurrentItemId(id);
     setDeleteDialogOpen("crew");
+  };
+
+  const handleCloseCrewDialog = () => {
+    setCrewDialogOpen(false);
+    setAvailableTechnicians(
+      allTechnicians.filter((t: Technician) => !t.m_crew_id)
+    );
   };
 
   const handleCrewSubmit = async () => {
@@ -245,11 +295,35 @@ const Maintenance: React.FC = () => {
       setCrewDialogOpen(false);
       await fetchCrews();
       await fetchAllCrews();
+      await fetchAllTechnicians();
     } catch (error) {
       if (dialogMode === "create")
         setOkDialog("Не удалось создать запись о ремонтной бригаде");
       else setOkDialog("Не удалось изменить запись о ремонтной бригаде");
     }
+  };
+
+  const handleTechnicianSelect = (technicianId: string) => {
+    setCrewFormData((prev) => {
+      const newTechIds = prev.technician_ids.includes(technicianId)
+        ? prev.technician_ids.filter((id) => id !== technicianId)
+        : [...prev.technician_ids, technicianId];
+
+      return {
+        ...prev,
+        technician_ids: newTechIds,
+      };
+    });
+    setAvailableTechnicians((prev) => {
+      const technician = allTechnicians.find((t) => t.user_id === technicianId);
+      if (!technician) return prev;
+
+      if (crewFormData.technician_ids.includes(technicianId)) {
+        return [...prev, technician];
+      } else {
+        return prev.filter((t) => t.user_id !== technicianId);
+      }
+    });
   };
 
   const handleRecordCreate = () => {
@@ -323,6 +397,7 @@ const Maintenance: React.FC = () => {
         await api.delete(`/maintenance-crew/${currentItemId}`);
         await fetchCrews();
         await fetchAllCrews();
+        await fetchAllTechnicians();
       } else {
         await api.delete(`/maintenance-record/${currentItemId}`);
         await fetchRecords();
@@ -389,33 +464,65 @@ const Maintenance: React.FC = () => {
                     <TableCell>ID</TableCell>
                     <TableCell>Имя</TableCell>
                     <TableCell>Статус</TableCell>
+                    <TableCell>Техники</TableCell>
                     <TableCell>Действия</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {crews.map((crew) => (
-                    <TableRow key={crew.m_crew_id}>
-                      <TableCell>{crew.m_crew_id.substring(0, 8)}...</TableCell>
-                      <TableCell>{crew.name}</TableCell>
-                      <TableCell>{crew.status}</TableCell>
-
-                      <TableCell>
-                        <Tooltip title="Изменить">
-                          <IconButton onClick={() => handleCrewEdit(crew)}>
-                            <EditIcon color="primary" />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Удалить">
-                          <IconButton
-                            onClick={() => handleCrewDelete(crew.m_crew_id)}
-                          >
-                            <DeleteIcon color="error" />
-                          </IconButton>
-                        </Tooltip>
+                  {crewsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : crews.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        Нет данных
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    crews.map((crew) => (
+                      <TableRow key={crew.m_crew_id}>
+                        <TableCell>
+                          {crew.m_crew_id.substring(0, 8)}...
+                        </TableCell>
+                        <TableCell>{crew.name}</TableCell>
+                        <TableCell>{crew.status}</TableCell>
+                        <TableCell>
+                          <Box
+                            sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                          >
+                            {crew.Technicians.map((tech) => (
+                              <Chip
+                                size="small"
+                                avatar={
+                                  <Avatar>
+                                    <EngineeringIcon fontSize="small" />
+                                  </Avatar>
+                                }
+                                label={`${tech.user_id.substring(0, 8)}...`}
+                              />
+                            ))}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Изменить">
+                            <IconButton onClick={() => handleCrewEdit(crew)}>
+                              <EditIcon color="primary" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Удалить">
+                            <IconButton
+                              onClick={() => handleCrewDelete(crew.m_crew_id)}
+                            >
+                              <DeleteIcon color="error" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -470,46 +577,61 @@ const Maintenance: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {records.map((record) => (
-                    <TableRow key={record.m_record_id}>
-                      <TableCell>
-                        {record.m_record_id.substring(0, 8)}...
-                      </TableCell>
-                      <TableCell>{record.text}</TableCell>
-                      <TableCell>
-                        <Checkbox checked={record.planned} disabled />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox checked={record.completed} disabled />
-                      </TableCell>
-                      <TableCell>
-                        {!record.completed && (
-                          <Tooltip title="Завершить">
-                            <IconButton
-                              onClick={() => setCompleteDialog(record)}
-                            >
-                              <CheckIcon color="primary" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <Tooltip title="Изменить">
-                          <IconButton onClick={() => handleRecordEdit(record)}>
-                            <EditIcon color="primary" />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Удалить">
-                          <IconButton
-                            onClick={() =>
-                              handleRecordDelete(record.m_record_id)
-                            }
-                          >
-                            <DeleteIcon color="error" />
-                          </IconButton>
-                        </Tooltip>
+                  {recordsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : records.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        Нет данных
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    records.map((record) => (
+                      <TableRow key={record.m_record_id}>
+                        <TableCell>
+                          {record.m_record_id.substring(0, 8)}...
+                        </TableCell>
+                        <TableCell>{record.text}</TableCell>
+                        <TableCell>
+                          <Checkbox checked={record.planned} disabled />
+                        </TableCell>
+                        <TableCell>
+                          <Checkbox checked={record.completed} disabled />
+                        </TableCell>
+                        <TableCell>
+                          {!record.completed && (
+                            <Tooltip title="Завершить ТО">
+                              <IconButton
+                                onClick={() => setCompleteDialog(record)}
+                              >
+                                <CheckIcon color="primary" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title="Изменить">
+                            <IconButton
+                              onClick={() => handleRecordEdit(record)}
+                            >
+                              <EditIcon color="primary" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Удалить">
+                            <IconButton
+                              onClick={() =>
+                                handleRecordDelete(record.m_record_id)
+                              }
+                            >
+                              <DeleteIcon color="error" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -527,25 +649,22 @@ const Maintenance: React.FC = () => {
       </Grid>
 
       {/* Диалоговое окно для бригады */}
-      <Dialog open={crewDialogOpen} onClose={() => setCrewDialogOpen(false)}>
+      <Dialog
+        open={crewDialogOpen}
+        onClose={() => handleCloseCrewDialog()}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>
           {dialogMode === "create"
             ? "Добавить бригаду"
             : "Редактировать бригаду"}
         </DialogTitle>
         <DialogContent>
-          <Box
-            sx={{
-              mt: 2,
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-              minWidth: 400,
-            }}
-          >
+          <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
               fullWidth
-              label="Имя"
+              label="Имя бригады"
               value={crewFormData.name}
               onChange={(e) =>
                 setCrewFormData({ ...crewFormData, name: e.target.value })
@@ -564,10 +683,62 @@ const Maintenance: React.FC = () => {
               error={!!formErrors.status}
               helperText={formErrors.status}
             />
+
+            <Typography variant="subtitle1">Выберите техников:</Typography>
+
+            {availableTechnicians.length === 0 ? (
+              <Alert severity="info">Нет доступных техников</Alert>
+            ) : (
+              <List dense sx={{ maxHeight: 300, overflow: "auto" }}>
+                {availableTechnicians.map((technician) => (
+                  <React.Fragment key={technician.user_id}>
+                    <ListItem
+                      button
+                      onClick={() => handleTechnicianSelect(technician.user_id)}
+                      selected={crewFormData.technician_ids.includes(
+                        technician.user_id
+                      )}
+                      sx={{ cursor: "pointer" }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar>
+                          <EngineeringIcon />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText primary={technician.user_id} />
+                      {crewFormData.technician_ids.includes(
+                        technician.user_id
+                      ) && <CheckIcon color="primary" />}
+                    </ListItem>
+                    <Divider variant="inset" component="li" />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+
+            {crewFormData.technician_ids.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2">Выбранные техники:</Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}>
+                  {crewFormData.technician_ids.map((id) => {
+                    const tech = allTechnicians.find((t) => t.user_id === id);
+                    return tech ? (
+                      <Chip
+                        key={tech.user_id}
+                        label={`${tech.user_id.substring(0, 8)}...`}
+                        onDelete={() => handleTechnicianSelect(tech.user_id)}
+                        deleteIcon={<DeleteIcon />}
+                        variant="outlined"
+                      />
+                    ) : null;
+                  })}
+                </Box>
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCrewDialogOpen(false)}>Отмена</Button>
+          <Button onClick={() => handleCloseCrewDialog()}>Отмена</Button>
           <Button onClick={handleCrewSubmit} variant="contained">
             Сохранить
           </Button>
