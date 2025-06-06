@@ -580,13 +580,13 @@ const Maintenance: React.FC = () => {
                 <TableBody>
                   {recordsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
                   ) : records.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         Нет данных
                       </TableCell>
                     </TableRow>
