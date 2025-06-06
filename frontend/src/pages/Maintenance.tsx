@@ -571,6 +571,7 @@ const Maintenance: React.FC = () => {
                   <TableRow>
                     <TableCell>ID</TableCell>
                     <TableCell>Текст</TableCell>
+                    <TableCell>Троллейбус</TableCell>
                     <TableCell>Запланировано</TableCell>
                     <TableCell>Завершено</TableCell>
                     <TableCell>Действия</TableCell>
@@ -579,13 +580,13 @@ const Maintenance: React.FC = () => {
                 <TableBody>
                   {recordsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
                   ) : records.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         Нет данных
                       </TableCell>
                     </TableRow>
@@ -596,6 +597,7 @@ const Maintenance: React.FC = () => {
                           {record.m_record_id.substring(0, 8)}...
                         </TableCell>
                         <TableCell>{record.text}</TableCell>
+                        <TableCell>{record.Trolleybus.number}</TableCell>
                         <TableCell>
                           <Checkbox checked={record.planned} disabled />
                         </TableCell>
@@ -684,7 +686,9 @@ const Maintenance: React.FC = () => {
               helperText={formErrors.status}
             />
 
-            <Typography variant="subtitle1">Выберите техников:</Typography>
+            <Typography variant="subtitle1">
+              Выберите свободных техников:
+            </Typography>
 
             {availableTechnicians.length === 0 ? (
               <Alert severity="info">Нет доступных техников</Alert>
