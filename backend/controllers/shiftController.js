@@ -88,7 +88,6 @@ export const endShift = async (req, res) => {
   try {
     const { shift_id } = req.params;
     const { end_time } = req.body;
-    console.log(end_time);
 
     const shift = await Shift.findByPk(shift_id);
     if (!shift) {
@@ -106,7 +105,6 @@ export const endShift = async (req, res) => {
         return res.status(400).json({ error: "Invalid date format" });
       }
       if (endTimeToSet <= shift.start_time) {
-        console.log(endTimeToSet, shift.start_time);
         return res.status(400).json({
           error: "End time must be after start time",
         });
@@ -126,7 +124,7 @@ export const endShift = async (req, res) => {
 // Get all shifts with proper date formatting
 export const getAllShifts = async (req, res) => {
   try {
-    const DEFAULT_LIMIT = 4;
+    const DEFAULT_LIMIT = 8;
     const { page = "0" } = req.query;
 
     const pageNumber = parseInt(page, 10);
