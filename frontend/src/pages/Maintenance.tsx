@@ -686,7 +686,9 @@ const Maintenance: React.FC = () => {
               helperText={formErrors.status}
             />
 
-            <Typography variant="subtitle1">Выберите техников:</Typography>
+            <Typography variant="subtitle1">
+              Выберите свободных техников:
+            </Typography>
 
             {availableTechnicians.length === 0 ? (
               <Alert severity="info">Нет доступных техников</Alert>
