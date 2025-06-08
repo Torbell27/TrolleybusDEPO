@@ -24,11 +24,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Avatar,
+  ListItemAvatar,
+  Tooltip,
 } from "@mui/material";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
+
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import TramIcon from '@mui/icons-material/Tram';
 
 interface Person {
   user_id: string;
@@ -376,7 +382,7 @@ const Crew: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : conductors.length === 0 ? (
-      <Typography>Нет свободных кондукторов</Typography>) : (
+      <Typography textAlign={'center'}>Нет свободных кондукторов</Typography>) : (
               <Paper elevation={3}>
                 <List>
                   {conductors.map((conductor) => (
@@ -397,7 +403,12 @@ const Crew: React.FC = () => {
                             : {}
                         }
                       >
-                        {conductor.User.name}
+                      <ListItemAvatar>
+                        <Avatar>
+                          <AccountCircleIcon fontSize="large"/>
+                        </Avatar>
+                      </ListItemAvatar>
+                        <Typography>{conductor.User.name}</Typography>
                       </ListItemButton>
                     </ListItem>
                   ))}
@@ -438,7 +449,7 @@ const Crew: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : drivers.length === 0 ? (
-      <Typography>Нет свободных водителей</Typography>) : (
+      <Typography textAlign={'center'}>Нет свободных водителей</Typography>) : (
               <Paper elevation={3}>
                 <List>
                   {drivers.map((driver) => (
@@ -459,7 +470,12 @@ const Crew: React.FC = () => {
                             : {}
                         }
                       >
-                        {driver.User.name}
+                      <ListItemAvatar>
+                        <Avatar>
+                          <AccountCircleIcon fontSize="large"/>
+                        </Avatar>
+                      </ListItemAvatar>
+                        <Typography>{driver.User.name}</Typography>
                       </ListItemButton>
                     </ListItem>
                   ))}
@@ -502,7 +518,7 @@ const Crew: React.FC = () => {
                 <CircularProgress />
               </Box>
             ) : trolleybuses.length === 0 ? (
-      <Typography>Нет свободных троллейбусов</Typography>) : (
+      <Typography textAlign={'center'}>Нет свободных троллейбусов</Typography>) : (
               <Paper elevation={3}>
                 <List>
                   {trolleybuses.map((t) => (
@@ -523,7 +539,12 @@ const Crew: React.FC = () => {
                             : {}
                         }
                       >
-                        {t.number}
+                                              <ListItemAvatar>
+                        <Avatar>
+                          <TramIcon fontSize="large"/>
+                        </Avatar>
+                      </ListItemAvatar>
+                        <Typography>{t.number}</Typography>
                       </ListItemButton>
                     </ListItem>
                   ))}
@@ -583,7 +604,7 @@ const Crew: React.FC = () => {
         <CircularProgress />
       </Box>
     ) : drivers.length === 0 ? (
-      <Typography>Нет свободных водителей</Typography>) : (
+      <Typography textAlign={'center'}>Нет свободных водителей</Typography>) : (
       <>
         <List>
           {drivers.map((driver) => (
@@ -592,7 +613,14 @@ const Crew: React.FC = () => {
                 onClick={() => handleChangeDriver(driver)}
                 selected={crewToEdit?.Driver?.user_id === driver.user_id}
               >
+                      <ListItemAvatar>
+                        <Avatar>
+                          <AccountCircleIcon fontSize="large"/>
+                        </Avatar>
+                      </ListItemAvatar>
+                <Typography>
                 {driver.User.name}
+                </Typography>
               </ListItemButton>
             </ListItem>
           ))}
@@ -636,7 +664,7 @@ const Crew: React.FC = () => {
         <CircularProgress />
       </Box>
     ) : conductors.length === 0 ? (
-      <Typography>Нет свободных кондукторов</Typography>) : (
+      <Typography textAlign={'center'}>Нет свободных кондукторов</Typography>) : (
       <>
         <List>
           {conductors.map((conductor) => (
@@ -645,7 +673,14 @@ const Crew: React.FC = () => {
                 onClick={() => handleChangeConductor(conductor)}
                 selected={crewToEdit?.Conductor?.user_id === conductor.user_id}
               >
+                        <ListItemAvatar>
+                        <Avatar>
+                          <AccountCircleIcon fontSize="large"/>
+                        </Avatar>
+                      </ListItemAvatar>
+                <Typography>
                 {conductor.User.name}
+                </Typography>
               </ListItemButton>
             </ListItem>
           ))}
@@ -670,7 +705,7 @@ const Crew: React.FC = () => {
 </Dialog>
 
 <Dialog open={trolleybusModalOpen} onClose={() => {setTrolleybusModalOpen(false); setSearchTrolleybuses(""); setPageTrolleybuses(1);}} fullWidth maxWidth="sm">
-  <DialogTitle>Выберите новый автобус</DialogTitle>
+  <DialogTitle>Выберите новый троллейбус</DialogTitle>
   <DialogContent dividers>
     <TextField
       fullWidth
@@ -689,7 +724,7 @@ const Crew: React.FC = () => {
         <CircularProgress />
       </Box>
     ) : trolleybuses.length === 0 ? (
-      <Typography>Нет свободных троллейбусов</Typography>) : (
+      <Typography textAlign={'center'}>Нет свободных троллейбусов</Typography>) : (
       <>
         <List>
           {trolleybuses.map((trolleybus) => (
@@ -698,7 +733,14 @@ const Crew: React.FC = () => {
                 onClick={() => handleChangeTrolleybus(trolleybus)}
                 selected={crewToEdit?.Trolleybus?.trolleybus_id === trolleybus.trolleybus_id}
               >
+                      <ListItemAvatar>
+                        <Avatar>
+                          <TramIcon fontSize="large"/>
+                        </Avatar>
+                      </ListItemAvatar>
+                <Typography>
                 {trolleybus.number}
+                </Typography>
               </ListItemButton>
             </ListItem>
           ))}
@@ -780,7 +822,9 @@ const Crew: React.FC = () => {
                   onClick={() => handleEditCrewRole(crew, 'Conductor')}
                 >
                   <span>{crew.Conductor?.User?.name || '—'}</span>
-                  <EditIcon />
+                  <Tooltip title="Изменить">
+                  <EditIcon color="primary"/>
+                  </Tooltip>
                 </Box>
               </TableCell>
 
@@ -793,7 +837,9 @@ const Crew: React.FC = () => {
                   onClick={() => handleEditCrewRole(crew, 'Driver')}
                 >
                   <span>{crew.Driver?.User?.name || '—'}</span>
-                  <EditIcon />
+                  <Tooltip title="Изменить">
+                  <EditIcon color="primary"/>
+                  </Tooltip>
                 </Box>
               </TableCell>
 
@@ -806,7 +852,9 @@ const Crew: React.FC = () => {
                   onClick={() => handleEditCrewRole(crew, 'Trolleybus')}
                 >
                   <span>{crew.Trolleybus?.number || '—'}</span>
-                  <EditIcon />
+                  <Tooltip title="Изменить">
+                  <EditIcon color="primary"/>
+                  </Tooltip>
                 </Box>
               </TableCell>
                 <TableCell align="right">
@@ -814,7 +862,9 @@ const Crew: React.FC = () => {
                     color="error"
                     onClick={() => handleDeleteCrew(crew.crew_id)}
                   >
+                    <Tooltip title="Удалить">
                   <DeleteIcon color="error" />
+                  </Tooltip>
                   </Button>
                 </TableCell>
               </TableRow>
