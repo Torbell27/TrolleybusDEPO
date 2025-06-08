@@ -55,6 +55,7 @@ const ShiftPage = () => {
   const [unplannedEnd, setUnplannedEnd] = useState(false);
   const [manualEndHour, setManualEndHour] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEndDialog, setShowEndDialog] = useState(false);
   const [selectedShiftId, setSelectedShiftId] = useState(null);
   const [pageShifts, setPageShifts] = useState<number>(1);
   const [totalShifts, setTotalShifts] = useState<number>(0);
@@ -130,6 +131,7 @@ const ShiftPage = () => {
     setEndNowShiftId(null);
     setUnplannedEnd(false);
     setManualEndHour("");
+    setShowEndDialog(false);
     fetchShifts(pageShifts);
   };
 
@@ -273,6 +275,7 @@ const ShiftPage = () => {
                     {!shift.completed && (
                       <IconButton
                         onClick={() => {
+                          setShowEndDialog(true);
                           setEndNowShiftId(shift.shift_id);
                           setEndNowShiftTime(shift.start_time);
                         }}
@@ -325,11 +328,14 @@ const ShiftPage = () => {
             </DialogActions>
           </Dialog>
 
-          {endNowShiftId && (
-            <Box mt={2} p={2} component={Paper}>
-              <Typography>
-                Завершить смену {new Date(endNowShiftTime).toLocaleString()}
-              </Typography>
+          <Dialog open={showEndDialog} onClose={() => setShowEndDialog(false)}>
+            <DialogTitle>
+              Завершить смену {new Date(endNowShiftTime).toLocaleString()}
+            </DialogTitle>
+            <DialogContent>
+              Вы уверены, что хотите завершить эту смену?
+            </DialogContent>
+            <DialogActions>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -338,7 +344,7 @@ const ShiftPage = () => {
                   />
                 }
                 label="Внеплановое завершение"
-              />
+              />{" "}
               {unplannedEnd && (
                 <TextField
                   label="Час завершения (0-23)"
@@ -350,6 +356,7 @@ const ShiftPage = () => {
                   style={{ marginTop: "8px" }}
                 />
               )}
+              <Button onClick={() => setShowEndDialog(false)}>Отмена</Button>
               <Button
                 variant="contained"
                 onClick={handleEndShift}
@@ -357,8 +364,8 @@ const ShiftPage = () => {
               >
                 Подтвердить завершение
               </Button>
-            </Box>
-          )}
+            </DialogActions>
+          </Dialog>
         </Box>
       </Box>
     </LocalizationProvider>
