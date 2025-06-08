@@ -597,7 +597,7 @@ const Maintenance: React.FC = () => {
                           {record.m_record_id.substring(0, 8)}...
                         </TableCell>
                         <TableCell>{record.text}</TableCell>
-                        <TableCell>{record.Trolleybus.number}</TableCell>
+                        <TableCell>{record.Trolleybus.number} ({record.Trolleybus.status})</TableCell>
                         <TableCell>
                           <Checkbox checked={record.planned} disabled />
                         </TableCell>

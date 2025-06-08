@@ -44,10 +44,10 @@ const ShiftPage = () => {
   const [firstEndTime, setFirstEndTime] = useState("14:00");
   const [secondStartTime, setSecondStartTime] = useState("14:00");
   const [secondEndTime, setSecondEndTime] = useState("22:00");
-  const [crews, setCrews] = useState([]);
+  const [crews, setCrews] = useState<any[]>([]);
   const [firstCrewId, setFirstCrewId] = useState("");
   const [secondCrewId, setSecondCrewId] = useState("");
-  const [shifts, setShifts] = useState([]);
+  const [shifts, setShifts] = useState<any[]>([]);
   const [sortOrder, setSortOrder] = useState("desc");
 
   const [endNowShiftId, setEndNowShiftId] = useState<string | null>(null);
@@ -109,7 +109,7 @@ const ShiftPage = () => {
     fetchShifts(pageShifts);
   };
 
-  const handleDeleteShift = async (shiftId) => {
+  const handleDeleteShift = async (shiftId:any) => {
     await api.delete(`/shift/${shiftId}`);
     setShowDeleteDialog(false);
     fetchShifts(pageShifts);
@@ -156,7 +156,7 @@ const ShiftPage = () => {
               minDate={startOfToday()}
               onChange={setDate}
               inputRef={inputC}
-              renderInput={(params) => <TextField fullWidth {...params} />}
+              renderInput={(params: any) => <TextField fullWidth {...params} />}
             />
             <TextField
               label="Начало (1 смена)"
@@ -288,7 +288,7 @@ const ShiftPage = () => {
                         setShowDeleteDialog(true);
                       }}
                     >
-                      <DeleteIcon />
+                      <DeleteIcon color="error"/>
                     </IconButton>
                   </TableCell>
                 </TableRow>
